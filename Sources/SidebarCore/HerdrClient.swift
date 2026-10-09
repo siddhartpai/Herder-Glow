@@ -1,5 +1,9 @@
 import Foundation
 
+public protocol HerdrSubscription: AnyObject, Sendable {
+    func cancel()
+}
+
 public protocol HerdrAPI: Sendable {
     func listAgents() async throws -> [Agent]
     func getAgent(_ paneID: String) async throws -> Agent
@@ -7,6 +11,9 @@ public protocol HerdrAPI: Sendable {
     func sendKeys(_ paneID: String, _ keys: [String]) async throws
     func prompt(_ paneID: String, _ text: String) async throws
     func focus(_ paneID: String) async throws
+    func subscribe(paneIDs: [String],
+                   onEvent: @escaping @Sendable (HerdrEvent) -> Void,
+                   onClose: @escaping @Sendable (Error) -> Void) -> HerdrSubscription
 }
 
 /// Talks to the herdr server over its Unix socket. One connection per request.
@@ -56,6 +63,38 @@ public final class HerdrClient: HerdrAPI {
         _ = try await call("agent.focus", ["target": paneID])
     }
 
+    /// Opens a long-lived connection for events. `onClose` is not called after `cancel()`.
+    public func subscribe(paneIDs: [String],
+                          onEvent: @escaping @Sendable (HerdrEvent) -> Void,
+                          onClose: @escaping @Sendable (Error) -> Void) -> HerdrSubscription {
+        let subscription = SocketSubscription()
+        let path = socketPath
+        let subscriptions = HerdrEvent.topologyEvents.map { ["type": $0] }
+            + paneIDs.map { ["type": "pane.agent_status_changed", "pane_id": $0] }
+        let request: [String: Any] = ["id": "sub", "method": "events.subscribe",
+                                      "params": ["subscriptions": subscriptions]]
+        Thread {
+            do {
+                let socket = try LineSocket(path: path)
+                defer { subscription.detach(); socket.close() }
+                guard subscription.attach(socket) else { return }
+                try socket.writeLine(JSONSerialization.data(withJSONObject: request))
+                let started = try JSONSerialization.jsonObject(with: socket.readLine()) as? [String: Any] ?? [:]
+                if let error = HerdrError(response: started) { throw error }
+                while true {
+                    let line = try socket.readLine()
+                    if let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
+                       let event = HerdrEvent.parse(object) {
+                        onEvent(event)
+                    }
+                }
+            } catch {
+                if !subscription.isCancelled { onClose(error) }
+            }
+        }.start()
+        return subscription
+    }
+
     private func call(_ method: String, _ params: [String: Any]) async throws -> [String: Any] {
         let path = socketPath
         return try await withCheckedThrowingContinuation { continuation in
@@ -80,5 +119,36 @@ public final class HerdrClient: HerdrAPI {
         if let error = HerdrError(response: response) { throw error }
         guard let result = response["result"] as? [String: Any] else { throw HerdrError.badResponse }
         return result
+    }
+}
+
+final class SocketSubscription: HerdrSubscription, @unchecked Sendable {
+    private let lock = NSLock()
+    private var socket: LineSocket?
+    private var cancelled = false
+
+    var isCancelled: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return cancelled
+    }
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        let socket = self.socket
+        lock.unlock()
+        socket?.shutdown()
+    }
+
+    /// Returns false if `cancel()` already ran.
+    func attach(_ socket: LineSocket) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard !cancelled else { return false }
+        self.socket = socket
+        return true
+    }
+
+    func detach() {
+        lock.lock(); socket = nil; lock.unlock()
     }
 }
