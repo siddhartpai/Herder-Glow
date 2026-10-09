@@ -105,8 +105,9 @@ final class HoverController {
 
     private func resize(height: CGFloat) {
         presentation.contentHeight = height
+        let top = presentation.isOpen && panel.isVisible ? panel.frame.maxY : nil
         panel.setContentSize(NSSize(width: Self.width, height: min(max(height, EdgeLightWindow.size.height), Self.maxHeight)))
-        position()
+        position(keepTop: top)
         refreshShadow()
     }
 
@@ -117,10 +118,11 @@ final class HoverController {
     }
 
     /// Right edge on the screen edge, vertically centered on the light, kept inside the screen.
-    private func position() {
+    /// While open, the top edge stays still so rows do not move under the mouse.
+    private func position(keepTop: CGFloat? = nil) {
         let light = anchor()
         let size = panel.frame.size
-        var y = light.midY - size.height / 2
+        var y = keepTop.map { $0 - size.height } ?? light.midY - size.height / 2
         if let screen = NSScreen.screens.first(where: { $0.frame.intersects(light) }) {
             let visible = screen.visibleFrame
             y = min(max(y, visible.minY), visible.maxY - size.height)

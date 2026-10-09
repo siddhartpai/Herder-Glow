@@ -9,13 +9,16 @@ public struct Agent: Identifiable, Equatable, Sendable {
     public var title: String
     public var cwd: String
     public var status: AgentStatus
+    /// Claude Code session id, used to find the transcript.
+    public var sessionID: String?
     public var id: String { paneID }
 
-    public init(paneID: String, title: String, cwd: String, status: AgentStatus) {
+    public init(paneID: String, title: String, cwd: String, status: AgentStatus, sessionID: String? = nil) {
         self.paneID = paneID
         self.title = title
         self.cwd = cwd
         self.status = status
+        self.sessionID = sessionID
     }
 
     /// Builds an agent from a herdr `AgentInfo` object.
@@ -27,6 +30,8 @@ public struct Agent: Identifiable, Equatable, Sendable {
         self.title = (title?.isEmpty == false ? title : nil) ?? (json["agent"] as? String) ?? paneID
         self.cwd = json["cwd"] as? String ?? ""
         self.status = AgentStatus(rawValue: status) ?? .unknown
+        let session = json["agent_session"] as? [String: Any]
+        self.sessionID = session?["kind"] as? String == "id" ? session?["value"] as? String : nil
     }
 }
 

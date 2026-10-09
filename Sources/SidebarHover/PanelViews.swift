@@ -309,26 +309,122 @@ struct AgentRow: View {
     let agent: Agent
     let model: PanelModel
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var isExpanded: Bool { model.expanded == agent.paneID }
 
     var body: some View {
-        Button {
-            Task { await model.focus(agent.paneID) }
-        } label: {
-            HStack(spacing: 8) {
-                Circle().fill(agent.status.dotColor).frame(width: 7, height: 7)
-                    .shadow(color: agent.status == .working ? agent.status.dotColor.opacity(0.8) : .clear, radius: 3)
-                Text(agent.title).font(.system(size: 12.5)).lineLimit(1)
-                Spacer(minLength: 4)
-                StatusChip(status: agent.status)
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                Task { await model.toggleSummary(agent.paneID) }
+            } label: {
+                HStack(spacing: 8) {
+                    Circle().fill(agent.status.dotColor).frame(width: 7, height: 7)
+                        .shadow(color: agent.status == .working ? agent.status.dotColor.opacity(0.8) : .clear, radius: 3)
+                    Text(agent.title).font(.system(size: 12.5)).lineLimit(1)
+                    Spacer(minLength: 4)
+                    StatusChip(status: agent.status)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(hovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            if isExpanded {
+                SummaryView(agent: agent, model: model)
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .buttonStyle(.plain)
+        .background(Color.white.opacity(isExpanded ? 0.06 : hovering ? 0.08 : 0),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipped()
         .onHover { hovering = $0 }
         .animation(.easeOut(duration: 0.12), value: hovering)
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.32, dampingFraction: 0.9), value: isExpanded)
+    }
+}
+
+/// What the agent did: from its Claude Code transcript, or its last screen lines.
+struct SummaryView: View {
+    let agent: Agent
+    let model: PanelModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let summary = model.summaries[agent.paneID], summary == TranscriptSummary() {
+                Text("No work in this session yet").font(.system(size: 11.5)).foregroundStyle(.secondary)
+            } else if let summary = model.summaries[agent.paneID] {
+                if let title = summary.title {
+                    Text(title).font(.system(size: 12, weight: .semibold))
+                }
+                if let request = summary.lastRequest {
+                    section("Your last request", request, lines: 3)
+                }
+                stats(summary)
+                if !summary.filesChanged.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        caption("Files changed")
+                        ForEach(summary.filesChanged.suffix(5), id: \.self) { path in
+                            Label((path as NSString).lastPathComponent, systemImage: "doc.text")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
+                                .help(path)
+                        }
+                    }
+                }
+                if let message = summary.lastMessage {
+                    section("Last message", message, lines: 4)
+                }
+            } else if let screen = model.screens[agent.paneID] {
+                caption("Last screen lines")
+                Text(lastLines(screen))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(10)
+            } else {
+                ProgressView().controlSize(.small)
+            }
+            Button {
+                Task { await model.focus(agent.paneID) }
+            } label: {
+                Label("Open in herdr", systemImage: "arrow.up.forward.app")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accentColor)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(text.uppercased()).font(.system(size: 9, weight: .semibold)).foregroundStyle(.tertiary)
+    }
+
+    private func section(_ label: String, _ text: String, lines: Int) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            caption(label)
+            Text(text).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(lines)
+        }
+    }
+
+    private func stats(_ summary: TranscriptSummary) -> some View {
+        HStack(spacing: 10) {
+            Label("\(summary.filesChanged.count) files", systemImage: "pencil")
+            Label("\(summary.commandCount) commands", systemImage: "terminal")
+        }
+        .font(.system(size: 10.5, weight: .medium))
+        .foregroundStyle(.secondary)
+    }
+
+    private func lastLines(_ screen: String) -> String {
+        screen.split(separator: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .suffix(10).joined(separator: "\n")
     }
 }
 
