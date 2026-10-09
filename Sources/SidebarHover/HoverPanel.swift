@@ -106,7 +106,7 @@ final class HoverController {
     private func resize(height: CGFloat) {
         presentation.contentHeight = height
         let top = presentation.isOpen && panel.isVisible ? panel.frame.maxY : nil
-        panel.setContentSize(NSSize(width: Self.width, height: min(max(height, EdgeLightWindow.size.height), Self.maxHeight)))
+        panel.setContentSize(NSSize(width: Self.width, height: min(max(height, LightView.pillHeight), Self.maxHeight)))
         position(keepTop: top)
         refreshShadow()
     }

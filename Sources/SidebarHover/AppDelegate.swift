@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         light = EdgeLightWindow(store: store) { [weak self] inside in
             self?.hover.lightHover(inside)
         }
-        hover.anchor = { [weak self] in self?.light.frame ?? .zero }
+        hover.anchor = { [weak self] in self?.light.pillFrame ?? .zero }
         light.orderFrontRegardless()
         setUpStatusItem()
     }

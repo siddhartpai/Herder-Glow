@@ -16,7 +16,7 @@ struct PanelRootView: View {
 
     var body: some View {
         let open = presentation.isOpen
-        let height = min(max(presentation.contentHeight, EdgeLightWindow.size.height), HoverController.maxHeight)
+        let height = min(max(presentation.contentHeight, LightView.pillHeight), HoverController.maxHeight)
         let radius: CGFloat = open ? 18 : 6
         ZStack(alignment: .trailing) {
             GlassSurface(cornerRadius: radius)
@@ -28,7 +28,7 @@ struct PanelRootView: View {
             .frame(width: HoverController.width, height: height)
             .opacity(open ? 1 : 0)
         }
-        .frame(width: open ? HoverController.width : EdgeLightWindow.size.width,
+        .frame(width: open ? HoverController.width : LightView.pillWidth,
                height: open ? height : LightView.pillHeight)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
