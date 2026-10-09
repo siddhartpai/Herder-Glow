@@ -21,16 +21,24 @@ final class HoverPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
 
+/// State the SwiftUI panel animates from: open grows the light into the panel.
+@MainActor @Observable
+final class PanelPresentation {
+    var isOpen = false
+    var contentHeight: CGFloat = 0
+}
+
 /// Opens the panel while the mouse is over the light or the panel; closes it 0.3 s after both are left.
 @MainActor
 final class HoverController {
     static let width: CGFloat = 380
     static let maxHeight: CGFloat = 560
-    private static let gap: CGFloat = 6
+    private static let collapseDuration = 0.4
 
     var anchor: () -> NSRect = { .zero }
     private let panel = HoverPanel()
     private let model: PanelModel
+    private let presentation = PanelPresentation()
     private var inLight = false
     private var inPanel = false
     private var closeWork: DispatchWorkItem?
@@ -39,10 +47,13 @@ final class HoverController {
         self.model = model
         let tracking = TrackingView()
         tracking.onHover = { [weak self] inside in
-            self?.inPanel = inside
-            self?.update()
+            guard let self else { return }
+            inPanel = inside
+            // The open panel covers the light, so the light never reports its own exit.
+            if !inside { inLight = false }
+            update()
         }
-        tracking.embed(NSHostingView(rootView: PanelRootView(model: model) { [weak self] height in
+        tracking.embed(NSHostingView(rootView: PanelRootView(model: model, presentation: presentation) { [weak self] height in
             self?.resize(height: height)
         }))
         panel.contentView = tracking
@@ -59,24 +70,53 @@ final class HoverController {
             open()
             return
         }
-        let work = DispatchWorkItem { [weak self] in self?.panel.orderOut(nil) }
+        let work = DispatchWorkItem { [weak self] in self?.close() }
         closeWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
     }
 
     private func open() {
-        guard !panel.isVisible else { return }
-        Task { await model.reloadBlocked() }
-        position()
-        panel.orderFrontRegardless()
+        guard !presentation.isOpen else { return }
+        if !panel.isVisible {
+            Task { await model.reloadBlocked() }
+            position()
+            panel.orderFrontRegardless()
+        }
+        // Let the collapsed shape render once, so the spring grows from the light.
+        DispatchQueue.main.async { [weak self] in
+            self?.presentation.isOpen = true
+            self?.refreshShadow()
+        }
+    }
+
+    private func close() {
+        // The panel opens under a still cursor and gets no enter event, so check the real position.
+        let mouse = NSEvent.mouseLocation
+        if (presentation.isOpen && panel.frame.contains(mouse)) || anchor().contains(mouse) {
+            inPanel = presentation.isOpen
+            return
+        }
+        presentation.isOpen = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.collapseDuration) { [weak self] in
+            guard let self, !self.presentation.isOpen else { return }
+            self.panel.orderOut(nil)
+        }
     }
 
     private func resize(height: CGFloat) {
-        panel.setContentSize(NSSize(width: Self.width, height: min(max(height, 1), Self.maxHeight)))
+        presentation.contentHeight = height
+        panel.setContentSize(NSSize(width: Self.width, height: min(max(height, EdgeLightWindow.size.height), Self.maxHeight)))
         position()
+        refreshShadow()
     }
 
-    /// Left of the light, vertically centered on it, kept inside the screen.
+    private func refreshShadow() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.collapseDuration) { [weak self] in
+            self?.panel.invalidateShadow()
+        }
+    }
+
+    /// Right edge on the screen edge, vertically centered on the light, kept inside the screen.
     private func position() {
         let light = anchor()
         let size = panel.frame.size
@@ -85,6 +125,6 @@ final class HoverController {
             let visible = screen.visibleFrame
             y = min(max(y, visible.minY), visible.maxY - size.height)
         }
-        panel.setFrameOrigin(NSPoint(x: light.minX - size.width - Self.gap, y: y))
+        panel.setFrameOrigin(NSPoint(x: light.maxX - size.width, y: y))
     }
 }

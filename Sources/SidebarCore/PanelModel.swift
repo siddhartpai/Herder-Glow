@@ -7,15 +7,28 @@ public final class PanelModel {
     public private(set) var screens: [String: String] = [:]
     public private(set) var errors: [String: String] = [:]
     public private(set) var sending: Set<String> = []
+    /// Panes answered in the last moment, so the view can show a check mark.
+    public private(set) var answered: Set<String> = []
     public var drafts: [String: String] = [:]
 
     private let api: any HerdrAPI
     private let answers: AnswerService
+    private let answeredDuration: Duration
 
-    public init(store: AgentStore, api: any HerdrAPI) {
+    public init(store: AgentStore, api: any HerdrAPI, answeredDuration: Duration = .milliseconds(1500)) {
         self.store = store
         self.api = api
         self.answers = AnswerService(api: api)
+        self.answeredDuration = answeredDuration
+    }
+
+    /// Blocked agents, plus agents just answered so their card can show the check mark.
+    public var cards: [Agent] {
+        store.agents.filter { $0.status == .blocked || answered.contains($0.paneID) }
+    }
+
+    public var rows: [Agent] {
+        store.agents.filter { $0.status != .blocked && !answered.contains($0.paneID) }
     }
 
     public func options(for paneID: String) -> [PromptOption] {
@@ -57,6 +70,11 @@ public final class PanelModel {
         defer { sending.remove(paneID) }
         do {
             try await operation(answers)
+            answered.insert(paneID)
+            Task { [weak self, answeredDuration] in
+                try? await Task.sleep(for: answeredDuration)
+                self?.answered.remove(paneID)
+            }
         } catch AnswerError.promptChanged {
             errors[paneID] = String(describing: AnswerError.promptChanged)
             await reload(paneID)

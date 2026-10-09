@@ -1,47 +1,156 @@
 import SwiftUI
 import SidebarCore
 
+private enum Motion {
+    static let morph = Animation.spring(response: 0.38, dampingFraction: 0.82)
+    static let smooth = Animation.spring(response: 0.32, dampingFraction: 0.9)
+    static let fade = Animation.easeOut(duration: 0.15)
+}
+
+/// The light-shaped surface that springs open into the panel.
 struct PanelRootView: View {
     let model: PanelModel
+    let presentation: PanelPresentation
     let onHeight: (CGFloat) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ScrollView {
-            PanelContent(model: model)
-                .onGeometryChange(for: CGFloat.self, of: \.size.height) { onHeight($0) }
+        let open = presentation.isOpen
+        let height = min(max(presentation.contentHeight, EdgeLightWindow.size.height), HoverController.maxHeight)
+        let radius: CGFloat = open ? 18 : 6
+        ZStack(alignment: .trailing) {
+            GlassSurface(cornerRadius: radius)
+            ScrollView {
+                PanelContent(model: model, isOpen: open)
+                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { onHeight($0) }
+            }
+            .scrollIndicators(.never)
+            .frame(width: HoverController.width, height: height)
+            .opacity(open ? 1 : 0)
         }
-        .frame(width: HoverController.width)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .frame(width: open ? HoverController.width : EdgeLightWindow.size.width,
+               height: open ? height : LightView.pillHeight)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+        .animation(reduceMotion ? Motion.fade : Motion.morph, value: open)
+        .environment(\.colorScheme, .dark)
     }
+}
+
+struct GlassSurface: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape.fill(.ultraThinMaterial)
+            .overlay(shape.fill(Color.black.opacity(0.66)))
+            .overlay(
+                shape.strokeBorder(
+                    LinearGradient(colors: [.white.opacity(0.22), .white.opacity(0.04)],
+                                   startPoint: .top, endPoint: .bottom),
+                    lineWidth: 0.75)
+            )
+    }
+}
+
+/// Blur-to-sharp entrance, staggered in reading order.
+private struct Reveal: ViewModifier {
+    let shown: Bool
+    let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        let still = shown || reduceMotion
+        content
+            .opacity(shown ? 1 : 0)
+            .blur(radius: still ? 0 : 6)
+            .offset(y: still ? 0 : 6)
+            .animation((reduceMotion ? Motion.fade : Motion.smooth)
+                .delay(shown ? 0.08 + Double(index) * 0.035 : 0), value: shown)
+    }
+}
+
+private extension View {
+    func reveal(_ shown: Bool, _ index: Int) -> some View { modifier(Reveal(shown: shown, index: index)) }
 }
 
 struct PanelContent: View {
     let model: PanelModel
+    let isOpen: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let store = model.store
         VStack(alignment: .leading, spacing: 10) {
-            if !model.store.connected {
-                Text("herdr is not running").foregroundStyle(.secondary)
-            } else if model.store.agents.isEmpty {
-                Text("No agents").foregroundStyle(.secondary)
+            PanelHeader(store: store).reveal(isOpen, 0)
+            if !store.connected {
+                Text("herdr is not running").font(.callout).foregroundStyle(.secondary).reveal(isOpen, 1)
+            } else if store.agents.isEmpty {
+                Text("No agents").font(.callout).foregroundStyle(.secondary).reveal(isOpen, 1)
             }
-            ForEach(model.store.blocked) { agent in
+            ForEach(Array(model.cards.enumerated()), id: \.element.id) { index, agent in
                 BlockedAgentCard(agent: agent, model: model)
+                    .reveal(isOpen, index + 1)
+                    .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)),
+                                            removal: .opacity.combined(with: .move(edge: .trailing))))
             }
-            if !model.store.blocked.isEmpty && !model.store.others.isEmpty {
-                Divider()
-            }
-            ForEach(model.store.others) { agent in
-                AgentRow(agent: agent, model: model)
+            VStack(spacing: 2) {
+                ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, agent in
+                    AgentRow(agent: agent, model: model)
+                        .reveal(isOpen, model.cards.count + index + 1)
+                }
             }
         }
-        .padding(12)
+        .padding(14)
+        .animation(reduceMotion ? Motion.fade : Motion.smooth, value: store.agents)
+    }
+}
+
+struct PanelHeader: View {
+    let store: AgentStore
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Agents").font(.system(size: 15, weight: .semibold, design: .rounded))
+            Spacer()
+            HStack(spacing: 8) {
+                count(store.blocked.count, "waiting", .red)
+                count(store.agents.filter { $0.status == .working }.count, "working", .yellow)
+            }
+        }
+        .foregroundStyle(.white)
+    }
+
+    @ViewBuilder
+    private func count(_ value: Int, _ label: String, _ color: Color) -> some View {
+        if value > 0 {
+            HStack(spacing: 3) {
+                Text("\(value)").monospacedDigit().contentTransition(.numericText(value: Double(value)))
+                Text(label)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(color)
+        }
+    }
+}
+
+struct StatusChip: View {
+    let status: AgentStatus
+
+    var body: some View {
+        Text(status == .blocked ? "waiting" : status.rawValue)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(status.dotColor)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(status.dotColor.opacity(0.16), in: Capsule())
     }
 }
 
 struct BlockedAgentCard: View {
     let agent: Agent
     let model: PanelModel
+    @State private var pending: Int?
 
     private var draft: Binding<String> {
         Binding(get: { model.drafts[agent.paneID] ?? "" },
@@ -49,64 +158,177 @@ struct BlockedAgentCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Circle().fill(agent.status.dotColor).frame(width: 8, height: 8)
-                Text(agent.title).font(.headline).lineLimit(1)
+        let busy = model.sending.contains(agent.paneID)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                Circle().fill(Color.red).frame(width: 7, height: 7)
+                    .shadow(color: .red.opacity(0.8), radius: 3)
+                Text(agent.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Spacer(minLength: 4)
+                StatusChip(status: agent.status)
             }
-            Text(agent.cwd).font(.caption).foregroundStyle(.secondary)
+            Label(agent.cwd, systemImage: "folder")
+                .font(.system(size: 10.5)).foregroundStyle(.tertiary)
                 .lineLimit(1).truncationMode(.head)
-            ScrollView(.horizontal) {
-                Text(model.screens[agent.paneID] ?? "Loading…")
+            ScrollView([.horizontal, .vertical]) {
+                Text(model.screens[agent.paneID].map(compact) ?? "Loading…")
                     .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.82))
                     .fixedSize()
-                    .padding(6)
+                    .padding(8)
             }
-            .background(Color.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 6))
-            ForEach(model.options(for: agent.paneID), id: \.number) { option in
-                Button {
-                    Task { await model.choose(option.number, for: agent.paneID) }
-                } label: {
-                    Text("\(option.number). \(option.label)")
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            .defaultScrollAnchor(.bottomLeading)
+            .scrollIndicators(.never)
+            .frame(maxHeight: 150)
+            .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.06), lineWidth: 0.5))
+            VStack(spacing: 4) {
+                ForEach(model.options(for: agent.paneID), id: \.number) { option in
+                    OptionButton(option: option, isPending: busy && pending == option.number) {
+                        pending = option.number
+                        Task { await model.choose(option.number, for: agent.paneID) }
+                    }
                 }
-                .buttonStyle(.bordered)
             }
-            HStack {
-                TextField("Answer", text: draft)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { Task { await model.reply(for: agent.paneID) } }
-                Button("Send") { Task { await model.reply(for: agent.paneID) } }
+            HStack(spacing: 6) {
+                TextField("Type an answer", text: draft)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .onSubmit { send() }
+                Button(action: send) {
+                    Image(systemName: "arrow.up.circle.fill").font(.system(size: 17))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(draft.wrappedValue.isEmpty ? Color.white.opacity(0.25) : Color.accentColor)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             if let error = model.errors[agent.paneID] {
-                Text(error).font(.caption).foregroundStyle(.red)
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11)).foregroundStyle(.orange)
             }
         }
-        .disabled(model.sending.contains(agent.paneID))
-        .padding(10)
-        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .disabled(busy)
+        .padding(12)
+        .background(Color.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .strokeBorder(Color.red.opacity(0.22), lineWidth: 0.75))
+        .overlay {
+            if model.answered.contains(agent.paneID) {
+                SentOverlay().transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: model.answered.contains(agent.paneID))
         .task(id: agent) { await model.reload(agent.paneID) }
+    }
+
+    /// Drops blank lines so the prompt fits the small terminal area.
+    private func compact(_ screen: String) -> String {
+        screen.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .joined(separator: "\n")
+    }
+
+    private func send() {
+        pending = nil
+        Task { await model.reply(for: agent.paneID) }
+    }
+}
+
+struct OptionButton: View {
+    let option: PromptOption
+    let isPending: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                ZStack {
+                    if isPending {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Text("\(option.number)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                    }
+                }
+                .frame(width: 18, height: 18)
+                .background(Color.white.opacity(0.1), in: Circle())
+                Text(option.label)
+                    .font(.system(size: 12))
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(hovering ? 0.13 : 0.06),
+                        in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+/// Check mark that draws itself after an answer is sent.
+struct SentOverlay: View {
+    @State private var drawn = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: 6) {
+            CheckShape()
+                .trim(from: 0, to: drawn ? 1 : 0)
+                .stroke(Color.green, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .frame(width: 30, height: 30)
+                .scaleEffect(drawn || reduceMotion ? 1 : 0.7)
+            Text("Sent").font(.system(size: 12, weight: .semibold)).foregroundStyle(.green)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.6)) { drawn = true }
+        }
+    }
+}
+
+struct CheckShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.18, y: rect.minY + rect.height * 0.55))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.42, y: rect.minY + rect.height * 0.78))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.84, y: rect.minY + rect.height * 0.26))
+        return path
     }
 }
 
 struct AgentRow: View {
     let agent: Agent
     let model: PanelModel
+    @State private var hovering = false
 
     var body: some View {
         Button {
             Task { await model.focus(agent.paneID) }
         } label: {
-            HStack(spacing: 6) {
-                Circle().fill(agent.status.dotColor).frame(width: 8, height: 8)
-                Text(agent.title).lineLimit(1)
-                Spacer()
-                Text(agent.status.rawValue).font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Circle().fill(agent.status.dotColor).frame(width: 7, height: 7)
+                    .shadow(color: agent.status == .working ? agent.status.dotColor.opacity(0.8) : .clear, radius: 3)
+                Text(agent.title).font(.system(size: 12.5)).lineLimit(1)
+                Spacer(minLength: 4)
+                StatusChip(status: agent.status)
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(hovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovering)
     }
 }
 

@@ -114,3 +114,34 @@ import Testing
     await model.reload("w1:p1")
     #expect(model.options(for: "w1:p1").map(\.label) == ["Yes", "No"])
 }
+
+@MainActor @Test func successfulChoiceIsMarkedAnsweredThenCleared() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked)]
+    let model = PanelModel(store: AgentStore(api: api), api: api, answeredDuration: .milliseconds(50))
+    await model.choose(1, for: "w1:p1")
+    #expect(model.answered.contains("w1:p1"))
+    #expect(await eventually { !model.answered.contains("w1:p1") })
+}
+
+@MainActor @Test func failedChoiceIsNotMarkedAnswered() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .working)]
+    let model = PanelModel(store: AgentStore(api: api), api: api)
+    await model.choose(1, for: "w1:p1")
+    #expect(model.answered.isEmpty)
+}
+
+@MainActor @Test func answeredCardStaysWhileAgentStartsWorking() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked), agent("w1:p2", .idle)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let model = PanelModel(store: store, api: api, answeredDuration: .milliseconds(80))
+    await model.choose(1, for: "w1:p1")
+    store.apply(.statusChanged(paneID: "w1:p1", status: .working))
+    #expect(model.cards.map(\.paneID) == ["w1:p1"])
+    #expect(model.rows.map(\.paneID) == ["w1:p2"])
+    #expect(await eventually { model.cards.isEmpty })
+    #expect(model.rows.map(\.paneID) == ["w1:p1", "w1:p2"])
+}
