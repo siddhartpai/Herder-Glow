@@ -41,7 +41,8 @@ public final class PanelModel {
     public func reply(for paneID: String) async {
         let text = drafts[paneID, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        await send(paneID) { try await $0.reply(text: text, paneID: paneID) }
+        let options = options(for: paneID)
+        await send(paneID) { try await $0.reply(text: text, paneID: paneID, options: options) }
         if errors[paneID] == nil { drafts[paneID] = nil }
     }
 

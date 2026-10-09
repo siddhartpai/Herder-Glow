@@ -2,8 +2,14 @@ import Foundation
 
 public enum AnswerError: Error, Equatable, CustomStringConvertible {
     case promptChanged
+    case chooseOption
 
-    public var description: String { "Prompt changed" }
+    public var description: String {
+        switch self {
+        case .promptChanged: "Prompt changed"
+        case .chooseOption: "Choose an option above"
+        }
+    }
 }
 
 /// Sends answers only to agents that herdr reports as `blocked` at send time.
@@ -19,9 +25,15 @@ public struct AnswerService: Sendable {
         try await api.sendKeys(paneID, [String(option)])
     }
 
-    public func reply(text: String, paneID: String) async throws {
+    /// In an option menu, Enter picks the highlighted option. So text goes only into a
+    /// "Type something" option, and never into a menu without one.
+    public func reply(text: String, paneID: String, options: [PromptOption]) async throws {
+        let freeText = options.first { $0.label.lowercased().hasPrefix("type something") }
+        if !options.isEmpty && freeText == nil { throw AnswerError.chooseOption }
         try await ensureBlocked(paneID)
-        try await api.prompt(paneID, text)
+        if let freeText { try await api.sendKeys(paneID, [String(freeText.number)]) }
+        try await api.sendText(paneID, text)
+        try await api.sendKeys(paneID, ["enter"])
     }
 
     private func ensureBlocked(_ paneID: String) async throws {

@@ -16,6 +16,17 @@ import Foundation
     }
 }
 
+@Test func underscoreEventNamesFromLiveHerdrAreParsed() {
+    for name in ["pane_created", "pane_closed", "pane_exited", "pane_agent_detected"] {
+        #expect(HerdrEvent.parse(["event": name, "data": [:]]) == .topologyChanged)
+    }
+    let event = HerdrEvent.parse([
+        "event": "pane_agent_status_changed",
+        "data": ["pane_id": "w1:p1", "workspace_id": "w1", "agent_status": "blocked"],
+    ])
+    #expect(event == .statusChanged(paneID: "w1:p1", status: .blocked))
+}
+
 @Test func otherEventsAreIgnored() {
     #expect(HerdrEvent.parse(["event": "pane.scroll_changed", "data": [:]]) == nil)
     #expect(HerdrEvent.parse(["id": "1", "result": ["type": "subscription_started"]]) == nil)

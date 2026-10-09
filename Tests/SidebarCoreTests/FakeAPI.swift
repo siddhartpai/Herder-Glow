@@ -18,7 +18,7 @@ final class FakeAPI: HerdrAPI, @unchecked Sendable {
     var screenText = ""
     var sendError: Error?
     var sentKeys: [Call] = []
-    var prompts: [Call] = []
+    var texts: [Call] = []
     var focused: [String] = []
     private(set) var subscribedPaneIDs: [String] = []
     private(set) var subscriptions: [FakeSubscription] = []
@@ -45,9 +45,9 @@ final class FakeAPI: HerdrAPI, @unchecked Sendable {
         sentKeys.append(Call(pane: paneID, value: keys.joined(separator: " ")))
     }
 
-    func prompt(_ paneID: String, _ text: String) async throws {
+    func sendText(_ paneID: String, _ text: String) async throws {
         if let sendError { throw sendError }
-        prompts.append(Call(pane: paneID, value: text))
+        texts.append(Call(pane: paneID, value: text))
     }
 
     func focus(_ paneID: String) async throws { focused.append(paneID) }

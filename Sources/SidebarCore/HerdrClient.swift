@@ -9,7 +9,7 @@ public protocol HerdrAPI: Sendable {
     func getAgent(_ paneID: String) async throws -> Agent
     func read(_ paneID: String, lines: Int) async throws -> String
     func sendKeys(_ paneID: String, _ keys: [String]) async throws
-    func prompt(_ paneID: String, _ text: String) async throws
+    func sendText(_ paneID: String, _ text: String) async throws
     func focus(_ paneID: String) async throws
     func subscribe(paneIDs: [String],
                    onEvent: @escaping @Sendable (HerdrEvent) -> Void,
@@ -55,8 +55,9 @@ public final class HerdrClient: HerdrAPI {
         _ = try await call("agent.send_keys", ["target": paneID, "keys": keys])
     }
 
-    public func prompt(_ paneID: String, _ text: String) async throws {
-        _ = try await call("agent.prompt", ["target": paneID, "text": text])
+    /// Types literal text into the pane. herdr refuses `agent.prompt` while an agent is blocked.
+    public func sendText(_ paneID: String, _ text: String) async throws {
+        _ = try await call("pane.send_text", ["pane_id": paneID, "text": text])
     }
 
     public func focus(_ paneID: String) async throws {

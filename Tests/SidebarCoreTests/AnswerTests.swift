@@ -21,9 +21,38 @@ import Testing
     let api = FakeAPI()
     api.agents = [agent("w1:p1", .done)]
     await #expect(throws: AnswerError.promptChanged) {
-        try await AnswerService(api: api).reply(text: "yes", paneID: "w1:p1")
+        try await AnswerService(api: api).reply(text: "yes", paneID: "w1:p1", options: [])
     }
-    #expect(api.prompts.isEmpty)
+    #expect(api.texts.isEmpty)
+}
+
+@Test func replyWithoutOptionsTypesTextThenEnter() async throws {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked)]
+    try await AnswerService(api: api).reply(text: "use main", paneID: "w1:p1", options: [])
+    #expect(api.texts == [Call(pane: "w1:p1", value: "use main")])
+    #expect(api.sentKeys == [Call(pane: "w1:p1", value: "enter")])
+}
+
+@Test func replyToMenuSelectsTypeSomethingFirst() async throws {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked)]
+    let options = [PromptOption(number: 1, label: "a.txt"), PromptOption(number: 2, label: "b.txt"),
+                   PromptOption(number: 3, label: "Type something.")]
+    try await AnswerService(api: api).reply(text: "c.txt", paneID: "w1:p1", options: options)
+    #expect(api.sentKeys == [Call(pane: "w1:p1", value: "3"), Call(pane: "w1:p1", value: "enter")])
+    #expect(api.texts == [Call(pane: "w1:p1", value: "c.txt")])
+}
+
+@Test func replyToMenuWithoutTypeSomethingSendsNothing() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked)]
+    let options = [PromptOption(number: 1, label: "Yes"), PromptOption(number: 2, label: "No")]
+    await #expect(throws: AnswerError.chooseOption) {
+        try await AnswerService(api: api).reply(text: "no thanks", paneID: "w1:p1", options: options)
+    }
+    #expect(api.sentKeys.isEmpty)
+    #expect(api.texts.isEmpty)
 }
 
 @MainActor @Test func promptChangedShowsMessageAndReloads() async {
@@ -42,7 +71,7 @@ import Testing
     let model = PanelModel(store: AgentStore(api: api), api: api)
     model.drafts["w1:p1"] = "   "
     await model.reply(for: "w1:p1")
-    #expect(api.prompts.isEmpty)
+    #expect(api.texts.isEmpty)
 }
 
 @MainActor @Test func successfulReplySendsTrimmedTextAndClearsDraft() async {
@@ -51,7 +80,7 @@ import Testing
     let model = PanelModel(store: AgentStore(api: api), api: api)
     model.drafts["w1:p1"] = " use main \n"
     await model.reply(for: "w1:p1")
-    #expect(api.prompts == [Call(pane: "w1:p1", value: "use main")])
+    #expect(api.texts == [Call(pane: "w1:p1", value: "use main")])
     #expect(model.drafts["w1:p1"] == nil)
 }
 
