@@ -42,7 +42,8 @@ public final class PanelModel {
         let text = drafts[paneID, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         let options = options(for: paneID)
-        await send(paneID) { try await $0.reply(text: text, paneID: paneID, options: options) }
+        let isMenu = PromptParser.isMenu(screens[paneID] ?? "")
+        await send(paneID) { try await $0.reply(text: text, paneID: paneID, options: options, isMenu: isMenu) }
         if errors[paneID] == nil { drafts[paneID] = nil }
     }
 

@@ -28,6 +28,11 @@ public enum PromptParser {
         return run.count >= 2 ? run : []
     }
 
+    /// True when the screen shows a selection menu, where Enter picks the highlighted item.
+    public static func isMenu(_ screen: String) -> Bool {
+        ["Enter to confirm", "Enter to select", "↑/↓ to navigate"].contains { screen.contains($0) }
+    }
+
     static func parseLine(_ raw: Substring) -> PromptOption? {
         var text = raw.trimmingCharacters(in: CharacterSet(charactersIn: "│|").union(.whitespaces))
         if let marker = ["❯", "›", ">"].first(where: { text.hasPrefix($0) }) {

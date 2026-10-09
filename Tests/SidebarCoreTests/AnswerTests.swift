@@ -55,6 +55,19 @@ import Testing
     #expect(api.texts.isEmpty)
 }
 
+@MainActor @Test func replyToUnnumberedMenuSendsNothing() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked)]
+    api.screenText = " ❯ No, exit\n   Yes, I trust this folder\n\n Enter to confirm · Esc to cancel"
+    let model = PanelModel(store: AgentStore(api: api), api: api)
+    await model.reload("w1:p1")
+    model.drafts["w1:p1"] = "yes"
+    await model.reply(for: "w1:p1")
+    #expect(api.texts.isEmpty)
+    #expect(api.sentKeys.isEmpty)
+    #expect(model.errors["w1:p1"] == "Answer this prompt in the terminal")
+}
+
 @MainActor @Test func promptChangedShowsMessageAndReloads() async {
     let api = FakeAPI()
     api.agents = [agent("w1:p1", .working)]

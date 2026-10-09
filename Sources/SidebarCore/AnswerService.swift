@@ -3,11 +3,13 @@ import Foundation
 public enum AnswerError: Error, Equatable, CustomStringConvertible {
     case promptChanged
     case chooseOption
+    case useTerminal
 
     public var description: String {
         switch self {
         case .promptChanged: "Prompt changed"
         case .chooseOption: "Choose an option above"
+        case .useTerminal: "Answer this prompt in the terminal"
         }
     }
 }
@@ -27,7 +29,8 @@ public struct AnswerService: Sendable {
 
     /// In an option menu, Enter picks the highlighted option. So text goes only into a
     /// "Type something" option, and never into a menu without one.
-    public func reply(text: String, paneID: String, options: [PromptOption]) async throws {
+    public func reply(text: String, paneID: String, options: [PromptOption], isMenu: Bool = false) async throws {
+        if options.isEmpty && isMenu { throw AnswerError.useTerminal }
         let freeText = options.first { $0.label.lowercased().hasPrefix("type something") }
         if !options.isEmpty && freeText == nil { throw AnswerError.chooseOption }
         try await ensureBlocked(paneID)
