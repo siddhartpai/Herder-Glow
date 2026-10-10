@@ -66,13 +66,30 @@ public final class PanelModel {
         if errors[paneID] == nil { drafts[paneID] = nil }
     }
 
-    /// Opens one row's summary, or closes it if it is open. Without a transcript, loads screen text.
+    /// Opens one row's summary, or closes it if it is open.
     public func toggleSummary(_ paneID: String) async {
         guard expanded != paneID else {
             expanded = nil
             return
         }
         expanded = paneID
+        await loadSummary(for: paneID)
+    }
+
+    /// Reloads the summary of the open row; the agent may have done more since it was loaded.
+    public func refreshSummary(_ paneID: String) async {
+        guard expanded == paneID else { return }
+        await loadSummary(for: paneID)
+    }
+
+    /// Called each time the panel opens.
+    public func panelOpened() async {
+        await reloadBlocked()
+        if let expanded { await refreshSummary(expanded) }
+    }
+
+    /// Reads the transcript summary; without a transcript, loads screen text.
+    private func loadSummary(for paneID: String) async {
         let sessionID = store.agents.first { $0.paneID == paneID }?.sessionID
         if let sessionID, let summary = await Task.detached(operation: { [loadSummary] in
             await loadSummary(sessionID)

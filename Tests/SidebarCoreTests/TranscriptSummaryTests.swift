@@ -106,3 +106,44 @@ private func tool(_ name: String, _ input: [String: Any]) -> [String: Any] {
     #expect(model.summaries["w1:p1"] == nil)
     #expect(model.screens["w1:p1"] == "last output")
 }
+
+private final class Counter: @unchecked Sendable {
+    var value = 0
+}
+
+@MainActor @Test func openSummaryIsReloadedWhenPanelOpensAgain() async {
+    let api = FakeAPI()
+    var claude = agent("w1:p1", .working)
+    claude.sessionID = "abc-123"
+    api.agents = [claude]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let loads = Counter()
+    let model = PanelModel(store: store, api: api) { _ in
+        loads.value += 1
+        return TranscriptSummary(lastMessage: "message \(loads.value)")
+    }
+    await model.toggleSummary("w1:p1")
+    #expect(model.summaries["w1:p1"]?.lastMessage == "message 1")
+    await model.panelOpened()
+    #expect(model.summaries["w1:p1"]?.lastMessage == "message 2")
+    await model.refreshSummary("w1:p1")
+    #expect(model.summaries["w1:p1"]?.lastMessage == "message 3")
+}
+
+@MainActor @Test func refreshSkipsClosedRows() async {
+    let api = FakeAPI()
+    var claude = agent("w1:p1", .done)
+    claude.sessionID = "abc-123"
+    api.agents = [claude]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let loads = Counter()
+    let model = PanelModel(store: store, api: api) { _ in
+        loads.value += 1
+        return TranscriptSummary(lastMessage: "m")
+    }
+    await model.panelOpened()
+    await model.refreshSummary("w1:p1")
+    #expect(loads.value == 0)
+}

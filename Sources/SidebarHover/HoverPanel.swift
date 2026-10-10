@@ -78,7 +78,7 @@ final class HoverController {
     private func open() {
         guard !presentation.isOpen else { return }
         if !panel.isVisible {
-            Task { await model.reloadBlocked() }
+            Task { await model.panelOpened() }
             position()
             panel.orderFrontRegardless()
         }

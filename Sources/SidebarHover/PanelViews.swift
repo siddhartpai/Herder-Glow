@@ -399,6 +399,14 @@ struct SummaryView: View {
             .foregroundStyle(Color.accentColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: agent.status) {
+            // A status change means new work; while working, follow the transcript as it grows.
+            await model.refreshSummary(agent.paneID)
+            while agent.status == .working && !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3))
+                await model.refreshSummary(agent.paneID)
+            }
+        }
     }
 
     private func caption(_ text: String) -> some View {
