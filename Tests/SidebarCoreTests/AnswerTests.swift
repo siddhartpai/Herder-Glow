@@ -145,3 +145,45 @@ import Testing
     #expect(await eventually { model.cards.isEmpty })
     #expect(model.rows.map(\.paneID) == ["w1:p1", "w1:p2"])
 }
+
+@MainActor private func shortcutModel(_ agents: [Agent], screen: String) async -> (PanelModel, FakeAPI) {
+    let api = FakeAPI()
+    api.agents = agents
+    api.screenText = screen
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let model = PanelModel(store: store, api: api)
+    for agent in agents { await model.reload(agent.paneID) }
+    return (model, api)
+}
+
+private let menu = "Which file?\n❯ 1. red.txt\n  2. blue.txt\n  3. green.txt"
+
+@MainActor @Test func digitKeyTargetsFirstWaitingCard() async {
+    let (model, _) = await shortcutModel([agent("w1:p1", .blocked), agent("w1:p2", .blocked)], screen: menu)
+    #expect(model.shortcutTarget(for: 2) == "w1:p1")
+}
+
+@MainActor @Test func digitKeyTargetsHoveredCard() async {
+    let (model, _) = await shortcutModel([agent("w1:p1", .blocked), agent("w1:p2", .blocked)], screen: menu)
+    model.hoveredCard = "w1:p2"
+    #expect(model.shortcutTarget(for: 2) == "w1:p2")
+}
+
+@MainActor @Test func digitWithoutMatchingOptionIsIgnored() async {
+    let (model, _) = await shortcutModel([agent("w1:p1", .blocked)], screen: menu)
+    #expect(model.shortcutTarget(for: 7) == nil)
+}
+
+@MainActor @Test func answeredCardIsNotAShortcutTarget() async {
+    let (model, _) = await shortcutModel([agent("w1:p1", .blocked)], screen: menu)
+    await model.choose(1, for: "w1:p1")
+    #expect(model.shortcutTarget(for: 2) == nil)
+}
+
+@MainActor @Test func choiceMarksPendingOptionUntilDone() async {
+    let (model, api) = await shortcutModel([agent("w1:p1", .blocked)], screen: menu)
+    await model.choose(3, for: "w1:p1")
+    #expect(api.sentKeys == [Call(pane: "w1:p1", value: "3")])
+    #expect(model.pendingOption["w1:p1"] == nil)
+}

@@ -42,6 +42,7 @@ final class HoverController {
     private var inLight = false
     private var inPanel = false
     private var closeWork: DispatchWorkItem?
+    private var keyMonitor: Any?
 
     init(model: PanelModel) {
         self.model = model
@@ -57,6 +58,28 @@ final class HoverController {
             self?.resize(height: height)
         }))
         panel.contentView = tracking
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            self?.handleKey(event) == true ? nil : event
+        }
+    }
+
+    /// Digit keys pick that option on a waiting card, unless the user is typing in a text box.
+    private func handleKey(_ event: NSEvent) -> Bool {
+        guard panel.isKeyWindow, !(panel.firstResponder is NSTextView),
+              event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+              let digit = event.charactersIgnoringModifiers.flatMap(Int.init), (1...9).contains(digit),
+              let pane = model.shortcutTarget(for: digit) else { return false }
+        Task { await model.choose(digit, for: pane) }
+        return true
+    }
+
+    /// Takes keyboard focus only while an agent waits, so digit keys reach the panel.
+    private func takeKeysIfWaiting() {
+        guard presentation.isOpen, !model.cards.isEmpty, !panel.isKeyWindow else { return }
+        panel.makeKey()
+        // SwiftUI may focus the first text box; clear it so digits pick options.
+        panel.makeFirstResponder(nil)
+        DispatchQueue.main.async { [weak self] in self?.panel.makeFirstResponder(nil) }
     }
 
     func lightHover(_ inside: Bool) {
@@ -85,6 +108,7 @@ final class HoverController {
         // Let the collapsed shape render once, so the spring grows from the light.
         DispatchQueue.main.async { [weak self] in
             self?.presentation.isOpen = true
+            self?.takeKeysIfWaiting()
             self?.refreshShadow()
         }
     }
@@ -97,6 +121,7 @@ final class HoverController {
             return
         }
         presentation.isOpen = false
+        panel.resignKey()
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.collapseDuration) { [weak self] in
             guard let self, !self.presentation.isOpen else { return }
             self.panel.orderOut(nil)

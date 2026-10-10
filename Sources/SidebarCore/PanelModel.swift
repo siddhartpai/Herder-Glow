@@ -9,6 +9,10 @@ public final class PanelModel {
     public private(set) var sending: Set<String> = []
     /// Panes answered in the last moment, so the view can show a check mark.
     public private(set) var answered: Set<String> = []
+    /// Option number being sent for each pane, so its button can show a spinner.
+    public private(set) var pendingOption: [String: Int] = [:]
+    /// The waiting card under the mouse; digit keys go to it.
+    public var hoveredCard: String?
     public var drafts: [String: String] = [:]
     /// The agent row that shows its summary.
     public private(set) var expanded: String?
@@ -54,7 +58,18 @@ public final class PanelModel {
     }
 
     public func choose(_ option: Int, for paneID: String) async {
+        pendingOption[paneID] = option
+        defer { pendingOption[paneID] = nil }
         await send(paneID) { try await $0.choose(option: option, paneID: paneID) }
+    }
+
+    /// The pane a digit key answers: the hovered card, else the first waiting card.
+    /// Nil when that card has no such option or is already being answered.
+    public func shortcutTarget(for digit: Int) -> String? {
+        let ready = cards.filter { !answered.contains($0.paneID) && !sending.contains($0.paneID) }
+        guard let pane = ready.first(where: { $0.paneID == hoveredCard })?.paneID ?? ready.first?.paneID,
+              options(for: pane).contains(where: { $0.number == digit }) else { return nil }
+        return pane
     }
 
     public func reply(for paneID: String) async {

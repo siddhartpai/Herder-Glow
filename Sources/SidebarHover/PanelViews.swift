@@ -150,7 +150,6 @@ struct StatusChip: View {
 struct BlockedAgentCard: View {
     let agent: Agent
     let model: PanelModel
-    @State private var pending: Int?
 
     private var draft: Binding<String> {
         Binding(get: { model.drafts[agent.paneID] ?? "" },
@@ -165,6 +164,13 @@ struct BlockedAgentCard: View {
                     .shadow(color: Palette.waiting.opacity(0.8), radius: 3)
                 Text(agent.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 Spacer(minLength: 4)
+                if let hint = keyHint {
+                    Text(hint)
+                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
+                }
                 StatusChip(status: agent.status)
             }
             Label(agent.cwd, systemImage: "folder")
@@ -185,8 +191,7 @@ struct BlockedAgentCard: View {
                 .strokeBorder(Color.white.opacity(0.06), lineWidth: 0.5))
             VStack(spacing: 4) {
                 ForEach(model.options(for: agent.paneID), id: \.number) { option in
-                    OptionButton(option: option, isPending: busy && pending == option.number) {
-                        pending = option.number
+                    OptionButton(option: option, isPending: model.pendingOption[agent.paneID] == option.number) {
                         Task { await model.choose(option.number, for: agent.paneID) }
                     }
                 }
@@ -221,6 +226,10 @@ struct BlockedAgentCard: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: model.answered.contains(agent.paneID))
+        .onHover { inside in
+            if inside { model.hoveredCard = agent.paneID }
+            else if model.hoveredCard == agent.paneID { model.hoveredCard = nil }
+        }
         .task(id: agent) { await model.reload(agent.paneID) }
     }
 
@@ -231,8 +240,15 @@ struct BlockedAgentCard: View {
             .joined(separator: "\n")
     }
 
+    /// "Press 1–3" on the card that digit keys answer.
+    private var keyHint: String? {
+        let numbers = model.options(for: agent.paneID).map(\.number)
+        guard let first = numbers.first, let last = numbers.last,
+              model.shortcutTarget(for: first) == agent.paneID else { return nil }
+        return "Press \(first)–\(min(last, 9))"
+    }
+
     private func send() {
-        pending = nil
         Task { await model.reply(for: agent.paneID) }
     }
 }
