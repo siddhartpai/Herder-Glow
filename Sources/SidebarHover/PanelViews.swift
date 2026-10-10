@@ -62,11 +62,17 @@ struct GlassSurface: View {
         // Closed, the fill and outline match the tab exactly, so the hand-off cannot be seen.
         let shape = NotchShape(closedness: closedness)
         shape.fill(.ultraThinMaterial).opacity(1 - closedness)
-            .overlay(shape.fill(Color.black.opacity(0.42 + 0.43 * closedness)))
+            .overlay(shape.fill(Color.black.opacity(0.2 + 0.65 * closedness)))
+            .overlay(shape.fill(Palette.glass.opacity(0.35 * (1 - closedness))))
+            // Sheen: light falls on the top of the glass and fades out toward the middle.
+            .overlay(shape.fill(LinearGradient(colors: [.white.opacity(0.12), .white.opacity(0.03), .clear],
+                                               startPoint: .top, endPoint: .center))
+                .opacity(1 - closedness))
             .overlay(
                 NotchShape(closedness: closedness, closed: false).stroke(
-                    LinearGradient(colors: [.white.opacity(0.22 - 0.08 * closedness),
-                                            .white.opacity(0.04 + 0.10 * closedness)],
+                    LinearGradient(colors: [.white.opacity(0.4 - 0.26 * closedness),
+                                            .white.opacity(0.06 + 0.08 * closedness),
+                                            .white.opacity(0.16 - 0.02 * closedness)],
                                    startPoint: .top, endPoint: .bottom),
                     lineWidth: 0.75 - 0.25 * closedness)
             )
@@ -120,9 +126,40 @@ struct PanelContent: View {
                         .reveal(isOpen, model.cards.count + index + 1)
                 }
             }
+            PalettePicker().reveal(isOpen, model.cards.count + model.rows.count + 1)
         }
         .padding(14)
         .animation(reduceMotion ? Motion.fade : Motion.smooth, value: store.agents)
+    }
+}
+
+/// Footer swatches that switch the theme, for trying palettes live.
+struct PalettePicker: View {
+    private let palette = Palette.shared
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(palette.theme.name.uppercased())
+                .font(.system(size: 9, weight: .semibold)).foregroundStyle(.tertiary)
+            Spacer()
+            ForEach(Theme.all) { theme in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) { palette.theme = theme }
+                } label: {
+                    Circle()
+                        .fill(AngularGradient(colors: [theme.waiting, theme.working, theme.calm, theme.waiting],
+                                              center: .center))
+                        .frame(width: 14, height: 14)
+                        .padding(2)
+                        .overlay(Circle().strokeBorder(Color.white.opacity(theme == palette.theme ? 0.8 : 0),
+                                                       lineWidth: 1))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help(theme.name)
+            }
+        }
+        .padding(.top, 4)
     }
 }
 
@@ -473,7 +510,7 @@ struct SummaryView: View {
 }
 
 extension AgentStatus {
-    var dotColor: Color {
+    @MainActor var dotColor: Color {
         switch self {
         case .blocked: Palette.waiting
         case .working: Palette.working

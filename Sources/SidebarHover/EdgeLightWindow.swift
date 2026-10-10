@@ -51,16 +51,73 @@ final class EdgeLightWindow: NSPanel {
     }
 }
 
-/// One palette for the light, the panel dots and the chips.
-enum Palette {
-    static let waiting = Color(red: 1.0, green: 0.29, blue: 0.35)
-    static let working = Color(red: 0.26, green: 0.56, blue: 1.0)
-    static let calm = Color(red: 0.22, green: 0.86, blue: 0.55)
+/// A named set of status colors, plus a tint for the open glass.
+struct Theme: Identifiable, Equatable {
+    let name: String
+    let waiting: Color
+    let working: Color
+    let calm: Color
+    let glass: Color
+    var id: String { name }
+
+    static let all: [Theme] = [
+        Theme(name: "Default",
+              waiting: Color(red: 1.0, green: 0.29, blue: 0.35),
+              working: Color(red: 0.26, green: 0.56, blue: 1.0),
+              calm: Color(red: 0.22, green: 0.86, blue: 0.55),
+              glass: .clear),
+        Theme(name: "Pastel",
+              waiting: Color(red: 1.0, green: 0.55, blue: 0.6),
+              working: Color(red: 0.6, green: 0.75, blue: 1.0),
+              calm: Color(red: 0.6, green: 0.92, blue: 0.75),
+              glass: Color(red: 0.35, green: 0.3, blue: 0.5)),
+        Theme(name: "Neon",
+              waiting: Color(red: 1.0, green: 0.1, blue: 0.6),
+              working: Color(red: 0.0, green: 0.9, blue: 1.0),
+              calm: Color(red: 0.6, green: 1.0, blue: 0.1),
+              glass: Color(red: 0.15, green: 0.0, blue: 0.3)),
+        Theme(name: "Sunset",
+              waiting: Color(red: 1.0, green: 0.36, blue: 0.2),
+              working: Color(red: 1.0, green: 0.72, blue: 0.2),
+              calm: Color(red: 0.95, green: 0.55, blue: 0.75),
+              glass: Color(red: 0.4, green: 0.15, blue: 0.1)),
+        Theme(name: "Ocean",
+              waiting: Color(red: 1.0, green: 0.48, blue: 0.4),
+              working: Color(red: 0.3, green: 0.7, blue: 0.95),
+              calm: Color(red: 0.25, green: 0.85, blue: 0.8),
+              glass: Color(red: 0.0, green: 0.2, blue: 0.35)),
+        Theme(name: "Mono",
+              waiting: Color(white: 1.0),
+              working: Color(white: 0.75),
+              calm: Color(white: 0.55),
+              glass: .clear),
+    ]
+}
+
+/// One palette for the light, the panel dots and the chips. The panel footer picks the theme.
+@MainActor @Observable
+final class Palette {
+    static let shared = Palette()
+    private static let key = "paletteTheme"
+
+    var theme: Theme {
+        didSet { UserDefaults.standard.set(theme.name, forKey: Self.key) }
+    }
+
+    private init() {
+        let saved = UserDefaults.standard.string(forKey: Self.key)
+        theme = Theme.all.first { $0.name == saved } ?? Theme.all[0]
+    }
+
+    static var waiting: Color { shared.theme.waiting }
+    static var working: Color { shared.theme.working }
+    static var calm: Color { shared.theme.calm }
+    static var glass: Color { shared.theme.glass }
     static let offline = Color(white: 0.45)
 }
 
 extension LightColor {
-    var tint: Color {
+    @MainActor var tint: Color {
         switch self {
         case .red: Palette.waiting
         case .blue: Palette.working
