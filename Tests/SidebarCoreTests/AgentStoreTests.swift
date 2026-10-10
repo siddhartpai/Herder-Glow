@@ -19,7 +19,7 @@ import Testing
     let store = AgentStore(api: api)
     await store.refresh()
     api.emit(.statusChanged(paneID: "w1:p2", status: .done))
-    #expect(await eventually { store.color == .yellow })
+    #expect(await eventually { store.color == .blue })
 }
 
 @MainActor @Test func topologyEventReloadsAndResubscribes() async {

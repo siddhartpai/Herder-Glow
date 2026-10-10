@@ -36,12 +36,12 @@ public struct Agent: Identifiable, Equatable, Sendable {
 }
 
 public enum LightColor: Equatable, Sendable {
-    case grey, red, yellow, green
+    case grey, red, blue, green
 
     public static func compute(connected: Bool, agents: [Agent]) -> LightColor {
         guard connected else { return .grey }
         if agents.contains(where: { $0.status == .blocked }) { return .red }
-        if agents.contains(where: { $0.status == .working }) { return .yellow }
+        if agents.contains(where: { $0.status == .working }) { return .blue }
         return .green
     }
 }

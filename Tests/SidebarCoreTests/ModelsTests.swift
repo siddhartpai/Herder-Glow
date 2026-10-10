@@ -33,8 +33,8 @@ private func agents(_ statuses: AgentStatus...) -> [Agent] {
     #expect(LightColor.compute(connected: true, agents: agents(.working, .blocked, .done)) == .red)
 }
 
-@Test func yellowWhenWorkingAndNoneBlocked() {
-    #expect(LightColor.compute(connected: true, agents: agents(.working, .done)) == .yellow)
+@Test func blueWhenWorkingAndNoneBlocked() {
+    #expect(LightColor.compute(connected: true, agents: agents(.working, .done)) == .blue)
 }
 
 @Test func greenWhenAllDoneIdleOrUnknown() {

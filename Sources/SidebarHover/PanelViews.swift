@@ -114,8 +114,8 @@ struct PanelHeader: View {
             Text("Agents").font(.system(size: 15, weight: .semibold, design: .rounded))
             Spacer()
             HStack(spacing: 8) {
-                count(store.blocked.count, "waiting", .red)
-                count(store.agents.filter { $0.status == .working }.count, "working", .yellow)
+                count(store.blocked.count, "waiting", Palette.waiting)
+                count(store.agents.filter { $0.status == .working }.count, "working", Palette.working)
             }
         }
         .foregroundStyle(.white)
@@ -161,8 +161,8 @@ struct BlockedAgentCard: View {
         let busy = model.sending.contains(agent.paneID)
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 7) {
-                Circle().fill(Color.red).frame(width: 7, height: 7)
-                    .shadow(color: .red.opacity(0.8), radius: 3)
+                Circle().fill(Palette.waiting).frame(width: 7, height: 7)
+                    .shadow(color: Palette.waiting.opacity(0.8), radius: 3)
                 Text(agent.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 Spacer(minLength: 4)
                 StatusChip(status: agent.status)
@@ -212,9 +212,9 @@ struct BlockedAgentCard: View {
         }
         .disabled(busy)
         .padding(12)
-        .background(Color.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Palette.waiting.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .strokeBorder(Color.red.opacity(0.22), lineWidth: 0.75))
+            .strokeBorder(Palette.waiting.opacity(0.22), lineWidth: 0.75))
         .overlay {
             if model.answered.contains(agent.paneID) {
                 SentOverlay().transition(.opacity)
@@ -431,9 +431,9 @@ struct SummaryView: View {
 extension AgentStatus {
     var dotColor: Color {
         switch self {
-        case .blocked: .red
-        case .working: .yellow
-        case .done: .green
+        case .blocked: Palette.waiting
+        case .working: Palette.working
+        case .done: Palette.calm
         case .idle, .unknown: .gray
         }
     }

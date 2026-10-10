@@ -51,9 +51,29 @@ final class EdgeLightWindow: NSPanel {
     }
 }
 
+/// One palette for the light, the panel dots and the chips.
+enum Palette {
+    static let waiting = Color(red: 1.0, green: 0.29, blue: 0.35)
+    static let working = Color(red: 0.26, green: 0.56, blue: 1.0)
+    static let calm = Color(red: 0.22, green: 0.86, blue: 0.55)
+    static let offline = Color(white: 0.45)
+}
+
+extension LightColor {
+    var tint: Color {
+        switch self {
+        case .red: Palette.waiting
+        case .blue: Palette.working
+        case .green: Palette.calm
+        case .grey: Palette.offline
+        }
+    }
+}
+
+/// A single glowing orb in a small dark capsule. Its color is the most urgent state.
 struct LightView: View {
-    static let pillWidth: CGFloat = 14
-    static let pillHeight: CGFloat = 48
+    static let pillWidth: CGFloat = 16
+    static let pillHeight: CGFloat = 30
     let store: AgentStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -65,7 +85,12 @@ struct LightView: View {
             if needsAttention {
                 AttentionGlow(still: reduceMotion).transition(.opacity)
             }
-            pill
+            capsule
+                .overlay(alignment: .topLeading) {
+                    if waiting >= 2 {
+                        CountBadge(count: waiting).offset(x: -7, y: -6).transition(.scale.combined(with: .opacity))
+                    }
+                }
                 .keyframeAnimator(initialValue: CGFloat(0), trigger: waiting) { view, offset in
                     view.offset(x: offset)
                 } keyframes: { _ in
@@ -81,68 +106,74 @@ struct LightView: View {
                 }
         }
         .frame(width: EdgeLightWindow.size.width, height: EdgeLightWindow.size.height, alignment: .trailing)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: needsAttention)
+        .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.75), value: waiting)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: store.color)
     }
 
-    private var pill: some View {
-        VStack(spacing: 3) {
-            lamp(.red, on: store.color == .red, pulse: !reduceMotion)
-            lamp(.yellow, on: store.color == .yellow)
-            lamp(.green, on: store.color == .green)
-            if waiting >= 2 {
-                Text("\(waiting)")
-                    .font(.system(size: 9, weight: .bold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.white)
-                    .contentTransition(.numericText(value: Double(waiting)))
-                    .transition(.opacity)
-            }
-        }
-        .padding(.vertical, 6)
-        .frame(width: Self.pillWidth)
-        .frame(minHeight: Self.pillHeight)
-        .background {
-            UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, style: .continuous)
-                .fill(Color.black.opacity(0.82))
-                .overlay(
-                    UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, style: .continuous)
-                        .strokeBorder(needsAttention ? Color.red.opacity(0.55) : Color.white.opacity(0.12),
-                                      lineWidth: needsAttention ? 1 : 0.5)
-                )
-        }
-        .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: waiting)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: store.color)
+    private var capsule: some View {
+        let shape = UnevenRoundedRectangle(topLeadingRadius: Self.pillWidth / 2,
+                                           bottomLeadingRadius: Self.pillWidth / 2, style: .continuous)
+        return Orb(color: store.color.tint, breathing: !reduceMotion && store.color != .grey,
+                   fast: needsAttention)
+            .frame(width: Self.pillWidth, height: Self.pillHeight)
+            .background(shape.fill(Color.black.opacity(0.85)))
+            .overlay(shape.strokeBorder(needsAttention ? Palette.waiting.opacity(0.5) : Color.white.opacity(0.1),
+                                        lineWidth: needsAttention ? 1 : 0.5))
     }
+}
 
-    @ViewBuilder
-    private func lamp(_ color: Color, on: Bool, pulse: Bool = false) -> some View {
-        let circle = Circle()
-            .fill(on ? color : color.opacity(0.16))
-            .frame(width: 8, height: 8)
-            .shadow(color: on ? color.opacity(0.9) : .clear, radius: 3)
-        if on && pulse {
-            circle.phaseAnimator([1.0, 0.45]) { view, phase in
-                view.opacity(phase)
-            } animation: { _ in .easeInOut(duration: 0.8) }
+/// Glass-like orb: a lit core, a soft rim and a glow in its own color.
+private struct Orb: View {
+    let color: Color
+    let breathing: Bool
+    let fast: Bool
+
+    var body: some View {
+        let orb = Circle()
+            .fill(RadialGradient(colors: [.white.opacity(0.95), color, color.opacity(0.75)],
+                                 center: UnitPoint(x: 0.38, y: 0.32), startRadius: 0, endRadius: 6.5))
+            .frame(width: 10, height: 10)
+            .shadow(color: color.opacity(0.9), radius: 4)
+            .shadow(color: color.opacity(0.5), radius: 8)
+        if breathing {
+            orb.phaseAnimator([false, true]) { view, bright in
+                view.scaleEffect(bright ? 1.0 : 0.86).opacity(bright ? 1 : 0.7)
+            } animation: { _ in .easeInOut(duration: fast ? 0.8 : 1.8) }
         } else {
-            circle
+            orb
         }
     }
 }
 
-/// Soft red halo behind the light that breathes while an agent waits.
+private struct CountBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.system(size: 8.5, weight: .bold, design: .rounded).monospacedDigit())
+            .foregroundStyle(.white)
+            .contentTransition(.numericText(value: Double(count)))
+            .frame(minWidth: 13, minHeight: 13)
+            .background(Palette.waiting, in: Circle())
+            .overlay(Circle().strokeBorder(Color.black.opacity(0.6), lineWidth: 1))
+    }
+}
+
+/// Soft red halo behind the orb that breathes while an agent waits.
 private struct AttentionGlow: View {
     let still: Bool
 
     var body: some View {
-        let halo = UnevenRoundedRectangle(topLeadingRadius: 10, bottomLeadingRadius: 10, style: .continuous)
-            .fill(Color.red)
-            .frame(width: LightView.pillWidth + 8, height: LightView.pillHeight + 10)
-            .blur(radius: 9)
+        let halo = Circle()
+            .fill(Palette.waiting)
+            .frame(width: 30, height: 30)
+            .blur(radius: 10)
+            .offset(x: 4)
         if still {
             halo.opacity(0.45)
         } else {
             halo.phaseAnimator([false, true]) { view, bright in
-                view.opacity(bright ? 0.75 : 0.2).scaleEffect(bright ? 1.12 : 0.95, anchor: .trailing)
+                view.opacity(bright ? 0.8 : 0.2).scaleEffect(bright ? 1.2 : 0.9)
             } animation: { _ in .easeInOut(duration: 0.8) }
         }
     }
