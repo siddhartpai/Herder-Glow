@@ -9,7 +9,8 @@ private enum Motion {
     static let fade = Animation.easeOut(duration: 0.15)
 }
 
-/// The light-shaped surface that springs open into the panel.
+/// The panel surface. It grows out of the tab on open and shrinks back into the tab's exact
+/// shape and position on close, staying dark the whole time.
 struct PanelRootView: View {
     let model: PanelModel
     let presentation: PanelPresentation
@@ -19,10 +20,9 @@ struct PanelRootView: View {
     var body: some View {
         let open = presentation.isOpen
         let height = min(max(presentation.contentHeight, LightView.pillHeight), HoverController.maxHeight)
-        let radius: CGFloat = open ? 18 : 6
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let shape = NotchShape(closedness: open ? 0 : 1)
         ZStack(alignment: .trailing) {
-            GlassSurface(cornerRadius: radius)
+            GlassSurface(closedness: open ? 0 : 1)
             ScrollView {
                 PanelContent(model: model, isOpen: open)
                     .onGeometryChange(for: CGFloat.self, of: \.size.height) { onHeight($0) }
@@ -32,14 +32,21 @@ struct PanelRootView: View {
             // Text leaves first on close, and arrives after the shape has grown on open.
             .opacity(open ? 1 : 0)
             .animation(reduceMotion ? Motion.fade
-                       : open ? .easeOut(duration: 0.2).delay(0.06) : .easeOut(duration: 0.1), value: open)
+                       : open ? .easeOut(duration: 0.2).delay(0.06) : .easeOut(duration: 0.08), value: open)
+            // The orb appears as the shape lands, so the hand-off to the real tab is invisible.
+            Orb(color: model.store.color.tint, breathing: false, fast: false)
+                .padding(.trailing, 5)
+                .opacity(open ? 0 : 1)
+                .animation(open ? .easeOut(duration: 0.08) : .easeIn(duration: 0.12).delay(HoverController.closeDuration * 0.6),
+                           value: open)
         }
+        // Trailing, so the shrinking frame keeps the edge side (and the orb) in view.
         .frame(width: open ? HoverController.width : LightView.pillWidth,
-               height: open ? height : LightView.pillHeight)
+               height: open ? height : LightView.pillHeight, alignment: .trailing)
         .clipShape(shape)
-        // The glass fades as it shrinks, so the tab underneath takes over without a jump.
-        .opacity(open ? 1 : 0)
         .background(shape.fill(Color.black.opacity(open ? 0.35 : 0)).blur(radius: 14).offset(y: 6))
+        // Closed, the shape sits on the tab even when the panel has moved since it opened.
+        .offset(y: open ? 0 : presentation.anchorOffset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         .padding(.leading, HoverController.shadowMargin)
         .padding(.vertical, HoverController.shadowMargin)
@@ -49,17 +56,19 @@ struct PanelRootView: View {
 }
 
 struct GlassSurface: View {
-    let cornerRadius: CGFloat
+    let closedness: CGFloat
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        shape.fill(.ultraThinMaterial)
-            .overlay(shape.fill(Color.black.opacity(0.66)))
+        // Closed, the fill and outline match the tab exactly, so the hand-off cannot be seen.
+        let shape = NotchShape(closedness: closedness)
+        shape.fill(.ultraThinMaterial).opacity(1 - closedness)
+            .overlay(shape.fill(Color.black.opacity(0.66 + 0.19 * closedness)))
             .overlay(
-                shape.strokeBorder(
-                    LinearGradient(colors: [.white.opacity(0.22), .white.opacity(0.04)],
+                NotchShape(closedness: closedness, closed: false).stroke(
+                    LinearGradient(colors: [.white.opacity(0.22 - 0.08 * closedness),
+                                            .white.opacity(0.04 + 0.10 * closedness)],
                                    startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.75)
+                    lineWidth: 0.75 - 0.25 * closedness)
             )
     }
 }

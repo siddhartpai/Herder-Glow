@@ -27,6 +27,8 @@ final class HoverPanel: NSPanel {
 final class PanelPresentation {
     var isOpen = false
     var contentHeight: CGFloat = 0
+    /// How far the tab's center is below the panel's center, in view points.
+    var anchorOffset: CGFloat = 0
 }
 
 /// Opens the panel while the mouse is over the light or the panel; closes it 0.3 s after both are left.
@@ -39,6 +41,8 @@ final class HoverController {
     static let shadowMargin: CGFloat = 24
 
     var anchor: () -> NSRect = { .zero }
+    /// The tab's window. It is hidden while the panel is on screen, so it cannot show through.
+    weak var lightWindow: NSWindow?
     private let panel = HoverPanel()
     private let model: PanelModel
     private let presentation = PanelPresentation()
@@ -107,6 +111,7 @@ final class HoverController {
             Task { await model.panelOpened() }
             position()
             panel.orderFrontRegardless()
+            lightWindow?.alphaValue = 0
         }
         // Let the collapsed shape render once, so the spring grows from the light.
         DispatchQueue.main.async { [weak self] in
@@ -127,6 +132,7 @@ final class HoverController {
         // Hide only after the collapse has fully settled into the tab.
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.closeDuration + 0.05) { [weak self] in
             guard let self, !self.presentation.isOpen else { return }
+            self.lightWindow?.alphaValue = 1
             self.panel.orderOut(nil)
         }
     }
@@ -152,5 +158,7 @@ final class HoverController {
             y = min(max(y, visible.minY), visible.maxY - size.height)
         }
         panel.setFrameOrigin(NSPoint(x: light.maxX - size.width, y: y))
+        // Screen y grows upward and view y grows downward.
+        presentation.anchorOffset = (y + size.height / 2) - light.midY
     }
 }

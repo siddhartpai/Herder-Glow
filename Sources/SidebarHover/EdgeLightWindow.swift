@@ -123,27 +123,39 @@ struct LightView: View {
 }
 
 /// Tab on the screen edge: slanted sides, a short flat face with round corners, and
-/// concave flares where it meets the edge so it sits flush. `closed: false` leaves out the
-/// edge side, so an outline never draws along the screen edge.
+/// concave fillets where it meets the edge so it sits flush. `closedness` blends it from the
+/// open panel (0: a rectangle with round outer corners) to the tab (1), so the panel can
+/// shrink into the tab. `closed: false` leaves out the edge side for outlines.
 struct NotchShape: Shape {
+    var closedness: CGFloat = 1
     var closed = true
-    private let faceInset: CGFloat = 16
-    private let cornerRadius: CGFloat = 5
-    private let flareRadius: CGFloat = 6
+
+    var animatableData: CGFloat {
+        get { closedness }
+        set { closedness = newValue }
+    }
 
     func path(in rect: CGRect) -> Path {
+        let t = min(max(closedness, 0), 1)
+        let faceInset = 16 * t
+        let cornerRadius = 18 + (5 - 18) * t
+        let edgeDrop = 8 * t
+        let fillet = 6 * t
         let edge = rect.maxX
         let faceTop = CGPoint(x: rect.minX, y: rect.minY + faceInset)
         let faceBottom = CGPoint(x: rect.minX, y: rect.maxY - faceInset)
-        // Where the slanted sides would meet the edge; the flares round these into the edge.
-        let edgeTop = CGPoint(x: edge, y: rect.minY + 8)
-        let edgeBottom = CGPoint(x: edge, y: rect.maxY - 8)
+        let edgeTop = CGPoint(x: edge, y: rect.minY + edgeDrop)
+        let edgeBottom = CGPoint(x: edge, y: rect.maxY - edgeDrop)
         var path = Path()
         path.move(to: CGPoint(x: edge, y: rect.minY))
-        path.addArc(tangent1End: edgeTop, tangent2End: faceTop, radius: flareRadius)
+        if fillet > 0.5 {
+            path.addArc(tangent1End: edgeTop, tangent2End: faceTop, radius: fillet)
+        }
         path.addArc(tangent1End: faceTop, tangent2End: faceBottom, radius: cornerRadius)
         path.addArc(tangent1End: faceBottom, tangent2End: edgeBottom, radius: cornerRadius)
-        path.addArc(tangent1End: edgeBottom, tangent2End: CGPoint(x: edge, y: rect.maxY), radius: flareRadius)
+        if fillet > 0.5 {
+            path.addArc(tangent1End: edgeBottom, tangent2End: CGPoint(x: edge, y: rect.maxY), radius: fillet)
+        }
         path.addLine(to: CGPoint(x: edge, y: rect.maxY))
         if closed { path.closeSubpath() }
         return path
@@ -151,7 +163,7 @@ struct NotchShape: Shape {
 }
 
 /// Glass-like orb: a lit core, a soft rim and a glow in its own color.
-private struct Orb: View {
+struct Orb: View {
     let color: Color
     let breathing: Bool
     let fast: Bool
