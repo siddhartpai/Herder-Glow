@@ -12,7 +12,8 @@ final class HoverPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         backgroundColor = .clear
         isOpaque = false
-        hasShadow = true
+        // The panel draws its own shadow, so it can shrink and fade with the shape.
+        hasShadow = false
         hidesOnDeactivate = false
         becomesKeyOnlyIfNeeded = true
     }
@@ -33,7 +34,9 @@ final class PanelPresentation {
 final class HoverController {
     static let width: CGFloat = 380
     static let maxHeight: CGFloat = 560
-    private static let collapseDuration = 0.4
+    nonisolated static let closeDuration = 0.3
+    /// Transparent space around the glass for its shadow.
+    static let shadowMargin: CGFloat = 24
 
     var anchor: () -> NSRect = { .zero }
     private let panel = HoverPanel()
@@ -109,7 +112,6 @@ final class HoverController {
         DispatchQueue.main.async { [weak self] in
             self?.presentation.isOpen = true
             self?.takeKeysIfWaiting()
-            self?.refreshShadow()
         }
     }
 
@@ -122,7 +124,8 @@ final class HoverController {
         }
         presentation.isOpen = false
         panel.resignKey()
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.collapseDuration) { [weak self] in
+        // Hide only after the collapse has fully settled into the tab.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.closeDuration + 0.05) { [weak self] in
             guard let self, !self.presentation.isOpen else { return }
             self.panel.orderOut(nil)
         }
@@ -131,16 +134,12 @@ final class HoverController {
     private func resize(height: CGFloat) {
         presentation.contentHeight = height
         let top = presentation.isOpen && panel.isVisible ? panel.frame.maxY : nil
-        panel.setContentSize(NSSize(width: Self.width, height: min(max(height, LightView.pillHeight), Self.maxHeight)))
+        let glassHeight = min(max(height, LightView.pillHeight), Self.maxHeight)
+        panel.setContentSize(NSSize(width: Self.width + Self.shadowMargin,
+                                    height: glassHeight + 2 * Self.shadowMargin))
         position(keepTop: top)
-        refreshShadow()
     }
 
-    private func refreshShadow() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.collapseDuration) { [weak self] in
-            self?.panel.invalidateShadow()
-        }
-    }
 
     /// Right edge on the screen edge, vertically centered on the light, kept inside the screen.
     /// While open, the top edge stays still so rows do not move under the mouse.

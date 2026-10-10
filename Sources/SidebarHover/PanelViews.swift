@@ -3,6 +3,8 @@ import SidebarCore
 
 private enum Motion {
     static let morph = Animation.spring(response: 0.38, dampingFraction: 0.82)
+    /// No bounce, so the panel settles into the tab without overshoot.
+    static let collapse = Animation.smooth(duration: HoverController.closeDuration)
     static let smooth = Animation.spring(response: 0.32, dampingFraction: 0.9)
     static let fade = Animation.easeOut(duration: 0.15)
 }
@@ -18,6 +20,7 @@ struct PanelRootView: View {
         let open = presentation.isOpen
         let height = min(max(presentation.contentHeight, LightView.pillHeight), HoverController.maxHeight)
         let radius: CGFloat = open ? 18 : 6
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         ZStack(alignment: .trailing) {
             GlassSurface(cornerRadius: radius)
             ScrollView {
@@ -26,13 +29,21 @@ struct PanelRootView: View {
             }
             .scrollIndicators(.never)
             .frame(width: HoverController.width, height: height)
+            // Text leaves first on close, and arrives after the shape has grown on open.
             .opacity(open ? 1 : 0)
+            .animation(reduceMotion ? Motion.fade
+                       : open ? .easeOut(duration: 0.2).delay(0.06) : .easeOut(duration: 0.1), value: open)
         }
         .frame(width: open ? HoverController.width : LightView.pillWidth,
                height: open ? height : LightView.pillHeight)
-        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .clipShape(shape)
+        // The glass fades as it shrinks, so the tab underneath takes over without a jump.
+        .opacity(open ? 1 : 0)
+        .background(shape.fill(Color.black.opacity(open ? 0.35 : 0)).blur(radius: 14).offset(y: 6))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .animation(reduceMotion ? Motion.fade : Motion.morph, value: open)
+        .padding(.leading, HoverController.shadowMargin)
+        .padding(.vertical, HoverController.shadowMargin)
+        .animation(reduceMotion ? Motion.fade : open ? Motion.morph : Motion.collapse, value: open)
         .environment(\.colorScheme, .dark)
     }
 }
