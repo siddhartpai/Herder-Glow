@@ -62,7 +62,7 @@ struct GlassSurface: View {
         // Closed, the fill and outline match the tab exactly, so the hand-off cannot be seen.
         let shape = NotchShape(closedness: closedness)
         shape.fill(.ultraThinMaterial).opacity(1 - closedness)
-            .overlay(shape.fill(Color.black.opacity(0.66 + 0.19 * closedness)))
+            .overlay(shape.fill(Color.black.opacity(0.42 + 0.43 * closedness)))
             .overlay(
                 NotchShape(closedness: closedness, closed: false).stroke(
                     LinearGradient(colors: [.white.opacity(0.22 - 0.08 * closedness),
