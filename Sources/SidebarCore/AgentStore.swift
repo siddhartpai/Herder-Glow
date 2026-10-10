@@ -44,6 +44,7 @@ public final class AgentStore {
         case let .statusChanged(paneID, status):
             if let index = agents.firstIndex(where: { $0.paneID == paneID }) {
                 agents[index].status = status
+                agents[index].activity = (agents.map(\.activity).max() ?? 0) + 1
             }
         case .topologyChanged:
             Task { await refresh() }

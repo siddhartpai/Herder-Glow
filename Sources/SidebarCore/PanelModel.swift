@@ -34,11 +34,17 @@ public final class PanelModel {
 
     /// Blocked agents, plus agents just answered so their card can show the check mark.
     public var cards: [Agent] {
-        store.agents.filter { $0.status == .blocked || answered.contains($0.paneID) }
+        newestFirst.filter { $0.status == .blocked || answered.contains($0.paneID) }
     }
 
     public var rows: [Agent] {
-        store.agents.filter { $0.status != .blocked && !answered.contains($0.paneID) }
+        newestFirst.filter { $0.status != .blocked && !answered.contains($0.paneID) }
+    }
+
+    private var newestFirst: [Agent] {
+        store.agents.enumerated()
+            .sorted { ($0.element.activity, -$0.offset) > ($1.element.activity, -$1.offset) }
+            .map(\.element)
     }
 
     public func options(for paneID: String) -> [PromptOption] {

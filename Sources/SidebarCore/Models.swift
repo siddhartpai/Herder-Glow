@@ -11,6 +11,8 @@ public struct Agent: Identifiable, Equatable, Sendable {
     public var status: AgentStatus
     /// Claude Code session id, used to find the transcript.
     public var sessionID: String?
+    /// Higher means the agent's state changed more recently (herdr `state_change_seq`).
+    public var activity: Int = 0
     public var id: String { paneID }
 
     public init(paneID: String, title: String, cwd: String, status: AgentStatus, sessionID: String? = nil) {
@@ -32,6 +34,7 @@ public struct Agent: Identifiable, Equatable, Sendable {
         self.status = AgentStatus(rawValue: status) ?? .unknown
         let session = json["agent_session"] as? [String: Any]
         self.sessionID = session?["kind"] as? String == "id" ? session?["value"] as? String : nil
+        self.activity = json["state_change_seq"] as? Int ?? 0
     }
 }
 
