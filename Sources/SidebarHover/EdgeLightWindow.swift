@@ -73,7 +73,7 @@ extension LightColor {
 /// A single glowing orb in a small dark capsule. Its color is the most urgent state.
 struct LightView: View {
     static let pillWidth: CGFloat = 22
-    static let pillHeight: CGFloat = 48
+    static let pillHeight: CGFloat = 54
     let store: AgentStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -114,26 +114,38 @@ struct LightView: View {
         let shape = NotchShape()
         return Orb(color: store.color.tint, breathing: !reduceMotion && store.color != .grey,
                    fast: needsAttention)
-            .padding(.trailing, 4)
+            .padding(.trailing, 5)
             .frame(width: Self.pillWidth, height: Self.pillHeight, alignment: .trailing)
             .background(shape.fill(Color.black.opacity(0.85)))
-            .overlay(shape.stroke(needsAttention ? Palette.waiting.opacity(0.55) : Color.white.opacity(0.14),
+            .overlay(NotchShape(closed: false).stroke(needsAttention ? Palette.waiting.opacity(0.55) : Color.white.opacity(0.14),
                                   lineWidth: needsAttention ? 1 : 0.5))
     }
 }
 
-/// Triangle pointing away from the screen edge, with its flat side on the edge and soft corners.
+/// Tab on the screen edge: slanted sides, a short flat face with round corners, and
+/// concave flares where it meets the edge so it sits flush. `closed: false` leaves out the
+/// edge side, so an outline never draws along the screen edge.
 struct NotchShape: Shape {
+    var closed = true
+    private let faceInset: CGFloat = 16
+    private let cornerRadius: CGFloat = 5
+    private let flareRadius: CGFloat = 6
+
     func path(in rect: CGRect) -> Path {
-        let top = CGPoint(x: rect.maxX, y: rect.minY)
-        let tip = CGPoint(x: rect.minX, y: rect.midY)
-        let bottom = CGPoint(x: rect.maxX, y: rect.maxY)
+        let edge = rect.maxX
+        let faceTop = CGPoint(x: rect.minX, y: rect.minY + faceInset)
+        let faceBottom = CGPoint(x: rect.minX, y: rect.maxY - faceInset)
+        // Where the slanted sides would meet the edge; the flares round these into the edge.
+        let edgeTop = CGPoint(x: edge, y: rect.minY + 8)
+        let edgeBottom = CGPoint(x: edge, y: rect.maxY - 8)
         var path = Path()
-        path.move(to: CGPoint(x: rect.maxX, y: rect.midY))
-        path.addArc(tangent1End: top, tangent2End: tip, radius: 3)
-        path.addArc(tangent1End: tip, tangent2End: bottom, radius: 6)
-        path.addArc(tangent1End: bottom, tangent2End: CGPoint(x: rect.maxX, y: rect.midY), radius: 3)
-        path.closeSubpath()
+        path.move(to: CGPoint(x: edge, y: rect.minY))
+        path.addArc(tangent1End: edgeTop, tangent2End: faceTop, radius: flareRadius)
+        path.addArc(tangent1End: faceTop, tangent2End: faceBottom, radius: cornerRadius)
+        path.addArc(tangent1End: faceBottom, tangent2End: edgeBottom, radius: cornerRadius)
+        path.addArc(tangent1End: edgeBottom, tangent2End: CGPoint(x: edge, y: rect.maxY), radius: flareRadius)
+        path.addLine(to: CGPoint(x: edge, y: rect.maxY))
+        if closed { path.closeSubpath() }
         return path
     }
 }
