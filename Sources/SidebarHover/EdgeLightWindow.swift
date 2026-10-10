@@ -72,8 +72,8 @@ extension LightColor {
 
 /// A single glowing orb in a small dark capsule. Its color is the most urgent state.
 struct LightView: View {
-    static let pillWidth: CGFloat = 16
-    static let pillHeight: CGFloat = 30
+    static let pillWidth: CGFloat = 22
+    static let pillHeight: CGFloat = 48
     let store: AgentStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -86,9 +86,9 @@ struct LightView: View {
                 AttentionGlow(still: reduceMotion).transition(.opacity)
             }
             capsule
-                .overlay(alignment: .topLeading) {
+                .overlay(alignment: .topTrailing) {
                     if waiting >= 2 {
-                        CountBadge(count: waiting).offset(x: -7, y: -6).transition(.scale.combined(with: .opacity))
+                        CountBadge(count: waiting).offset(x: -2, y: -8).transition(.scale.combined(with: .opacity))
                     }
                 }
                 .keyframeAnimator(initialValue: CGFloat(0), trigger: waiting) { view, offset in
@@ -111,14 +111,30 @@ struct LightView: View {
     }
 
     private var capsule: some View {
-        let shape = UnevenRoundedRectangle(topLeadingRadius: Self.pillWidth / 2,
-                                           bottomLeadingRadius: Self.pillWidth / 2, style: .continuous)
+        let shape = NotchShape()
         return Orb(color: store.color.tint, breathing: !reduceMotion && store.color != .grey,
                    fast: needsAttention)
-            .frame(width: Self.pillWidth, height: Self.pillHeight)
+            .padding(.trailing, 4)
+            .frame(width: Self.pillWidth, height: Self.pillHeight, alignment: .trailing)
             .background(shape.fill(Color.black.opacity(0.85)))
-            .overlay(shape.strokeBorder(needsAttention ? Palette.waiting.opacity(0.5) : Color.white.opacity(0.1),
-                                        lineWidth: needsAttention ? 1 : 0.5))
+            .overlay(shape.stroke(needsAttention ? Palette.waiting.opacity(0.55) : Color.white.opacity(0.14),
+                                  lineWidth: needsAttention ? 1 : 0.5))
+    }
+}
+
+/// Triangle pointing away from the screen edge, with its flat side on the edge and soft corners.
+struct NotchShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let top = CGPoint(x: rect.maxX, y: rect.minY)
+        let tip = CGPoint(x: rect.minX, y: rect.midY)
+        let bottom = CGPoint(x: rect.maxX, y: rect.maxY)
+        var path = Path()
+        path.move(to: CGPoint(x: rect.maxX, y: rect.midY))
+        path.addArc(tangent1End: top, tangent2End: tip, radius: 3)
+        path.addArc(tangent1End: tip, tangent2End: bottom, radius: 6)
+        path.addArc(tangent1End: bottom, tangent2End: CGPoint(x: rect.maxX, y: rect.midY), radius: 3)
+        path.closeSubpath()
+        return path
     }
 }
 
