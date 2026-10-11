@@ -17,6 +17,8 @@ public final class PanelModel {
     /// The agent row that shows its summary.
     public private(set) var expanded: String?
     public private(set) var summaries: [String: TranscriptSummary] = [:]
+    /// Transcript titles, used as agent names.
+    public private(set) var titles: [String: String] = [:]
 
     private let api: any HerdrAPI
     private let answers: AnswerService
@@ -107,6 +109,24 @@ public final class PanelModel {
     public func panelOpened() async {
         await reloadBlocked()
         if let expanded { await refreshSummary(expanded) }
+    }
+
+    /// The transcript title, else the terminal title.
+    public func name(for agent: Agent) -> String {
+        titles[agent.paneID] ?? agent.title
+    }
+
+    /// Reloads terminal titles and transcript titles, so names follow what each agent works on.
+    public func refreshNames() async {
+        await store.reloadNames()
+        for agent in store.agents {
+            guard let sessionID = agent.sessionID else {
+                titles[agent.paneID] = nil
+                continue
+            }
+            let summary = await Task.detached { [loadSummary] in await loadSummary(sessionID) }.value
+            titles[agent.paneID] = summary?.title
+        }
     }
 
     /// Reads the transcript summary; without a transcript, loads screen text.

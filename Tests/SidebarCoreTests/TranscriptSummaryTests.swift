@@ -147,3 +147,37 @@ private final class Counter: @unchecked Sendable {
     await model.refreshSummary("w1:p1")
     #expect(loads.value == 0)
 }
+
+@MainActor @Test func nameIsTranscriptTitleAndFollowsChanges() async {
+    let api = FakeAPI()
+    var claude = agent("w1:p1", .working)
+    claude.sessionID = "abc-123"
+    api.agents = [claude, agent("w1:p2", .idle)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let title = Box("First title")
+    let model = PanelModel(store: store, api: api) { _ in TranscriptSummary(title: title.value) }
+    await model.refreshNames()
+    #expect(model.name(for: store.agents[0]) == "First title")
+    #expect(model.name(for: store.agents[1]) == "w1:p2")
+    title.value = "Second title"
+    await model.refreshNames()
+    #expect(model.name(for: store.agents[0]) == "Second title")
+}
+
+@MainActor @Test func refreshNamesPicksUpNewTerminalTitleAndSession() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .working)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    api.agents[0].title = "renamed"
+    api.agents[0].sessionID = "new-session"
+    api.agents[0].status = .done
+    let model = PanelModel(store: store, api: api) { _ in nil }
+    await model.refreshNames()
+    #expect(model.name(for: store.agents[0]) == "renamed")
+    #expect(store.agents[0].sessionID == "new-session")
+    // Status comes from events, not from the name refresh.
+    #expect(store.agents[0].status == .working)
+    #expect(api.subscriptions.count == 1)
+}

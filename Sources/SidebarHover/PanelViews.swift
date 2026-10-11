@@ -130,6 +130,13 @@ struct PanelContent: View {
         }
         .padding(14)
         .animation(reduceMotion ? Motion.fade : Motion.smooth, value: store.agents)
+        .task(id: isOpen) {
+            // Names follow the agents' work while the panel is open.
+            while isOpen && !Task.isCancelled {
+                await model.refreshNames()
+                try? await Task.sleep(for: .seconds(3))
+            }
+        }
     }
 }
 
@@ -219,7 +226,7 @@ struct BlockedAgentCard: View {
             HStack(spacing: 7) {
                 Circle().fill(Palette.waiting).frame(width: 7, height: 7)
                     .shadow(color: Palette.waiting.opacity(0.8), radius: 3)
-                Text(agent.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text(model.name(for: agent)).font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 Spacer(minLength: 4)
                 if let hint = keyHint {
                     Text(hint)
@@ -394,7 +401,7 @@ struct AgentRow: View {
                 HStack(spacing: 8) {
                     Circle().fill(agent.status.dotColor).frame(width: 7, height: 7)
                         .shadow(color: agent.status == .working ? agent.status.dotColor.opacity(0.8) : .clear, radius: 3)
-                    Text(agent.title).font(.system(size: 12.5)).lineLimit(1)
+                    Text(model.name(for: agent)).font(.system(size: 12.5)).lineLimit(1)
                     Spacer(minLength: 4)
                     StatusChip(status: agent.status)
                     Image(systemName: "chevron.right")

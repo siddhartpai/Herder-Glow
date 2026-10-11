@@ -39,6 +39,16 @@ public final class AgentStore {
         }
     }
 
+    /// Updates terminal titles and session ids. Status and the subscription stay as they are.
+    public func reloadNames() async {
+        guard let latest = try? await api.listAgents() else { return }
+        for fresh in latest {
+            guard let index = agents.firstIndex(where: { $0.paneID == fresh.paneID }) else { continue }
+            agents[index].title = fresh.title
+            agents[index].sessionID = fresh.sessionID
+        }
+    }
+
     public func apply(_ event: HerdrEvent) {
         switch event {
         case let .statusChanged(paneID, status):
