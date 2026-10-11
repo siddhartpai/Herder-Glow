@@ -187,3 +187,97 @@ private let menu = "Which file?\n❯ 1. red.txt\n  2. blue.txt\n  3. green.txt"
     #expect(api.sentKeys == [Call(pane: "w1:p1", value: "3")])
     #expect(model.pendingOption["w1:p1"] == nil)
 }
+
+@MainActor @Test func hoverShowsSummariesWhenOnlyFinishedAgents() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5
+    api.agents = [done, agent("w1:p2", .working)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let model = PanelModel(store: store, api: api) { _ in nil }
+    #expect(model.mode == .finished)
+    model.showAll = true
+    #expect(model.mode == .all)
+}
+
+@MainActor @Test func waitingAgentAlwaysShowsFullPanel() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5
+    api.agents = [done, agent("w1:p2", .blocked)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    #expect(PanelModel(store: store, api: api) { _ in nil }.mode == .all)
+}
+
+@MainActor @Test func closingAfterFinishedSummariesMarksThemSeen() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5; done.sessionID = "abc-123"
+    api.agents = [done]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let model = PanelModel(store: store, api: api) { _ in TranscriptSummary(lastMessage: "Done") }
+    await model.panelOpened()
+    #expect(model.summaries["w1:p1"]?.lastMessage == "Done")
+    model.showAll = true
+    model.panelClosed()
+    #expect(store.color == .calm)
+    #expect(model.showAll == false)
+}
+
+@MainActor @Test func closingFullPanelDoesNotMarkSeen() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5
+    api.agents = [done, agent("w1:p2", .blocked)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let model = PanelModel(store: store, api: api) { _ in nil }
+    await model.panelOpened()
+    model.panelClosed()
+    #expect(store.finished.map(\.paneID) == ["w1:p1"])
+}
+
+@Test func nextTaskGoesToFinishedOrIdleAgent() async throws {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .done), agent("w1:p2", .idle)]
+    try await AnswerService(api: api).nextTask(text: "add tests", paneID: "w1:p1")
+    try await AnswerService(api: api).nextTask(text: "ship it", paneID: "w1:p2")
+    #expect(api.prompts == [Call(pane: "w1:p1", value: "add tests"), Call(pane: "w1:p2", value: "ship it")])
+}
+
+@Test func nextTaskRefusedWhileAgentWaitsOrWorks() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .blocked), agent("w1:p2", .working)]
+    for pane in ["w1:p1", "w1:p2"] {
+        await #expect(throws: AnswerError.agentBusy) {
+            try await AnswerService(api: api).nextTask(text: "hi", paneID: pane)
+        }
+    }
+    #expect(api.prompts.isEmpty)
+}
+
+@MainActor @Test func sendNextTrimsClearsDraftAndKeepsFinishedCardOpen() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5
+    api.agents = [done]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    let model = PanelModel(store: store, api: api) { _ in nil }
+    await model.panelOpened()
+    model.drafts["w1:p1"] = "  next step \n"
+    await model.sendNext(for: "w1:p1")
+    #expect(api.prompts == [Call(pane: "w1:p1", value: "next step")])
+    #expect(model.drafts["w1:p1"] == nil)
+    #expect(model.sentNext.contains("w1:p1"))
+    store.apply(.statusChanged(paneID: "w1:p1", status: .working))
+    #expect(model.mode == .finished)
+    #expect(model.finishedAgents.map(\.paneID) == ["w1:p1"])
+}
+
+@MainActor @Test func blankNextTaskSendsNothing() async {
+    let api = FakeAPI()
+    api.agents = [agent("w1:p1", .done)]
+    let model = PanelModel(store: AgentStore(api: api), api: api) { _ in nil }
+    model.drafts["w1:p1"] = "   "
+    await model.sendNext(for: "w1:p1")
+    #expect(api.prompts.isEmpty)
+}

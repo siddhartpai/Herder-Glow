@@ -114,22 +114,38 @@ struct PanelContent: View {
             } else if store.agents.isEmpty {
                 Text("No agents").font(.callout).foregroundStyle(.secondary).reveal(isOpen, 1)
             }
-            ForEach(Array(model.cards.enumerated()), id: \.element.id) { index, agent in
-                BlockedAgentCard(agent: agent, model: model)
-                    .reveal(isOpen, index + 1)
-                    .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)),
-                                            removal: .opacity.combined(with: .move(edge: .trailing))))
-            }
-            VStack(spacing: 2) {
-                ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, agent in
-                    AgentRow(agent: agent, model: model)
-                        .reveal(isOpen, model.cards.count + index + 1)
+            if model.mode == .finished {
+                ForEach(Array(model.finishedAgents.enumerated()), id: \.element.id) { index, agent in
+                    FinishedCard(agent: agent, model: model).reveal(isOpen, index + 1)
                 }
+                Button {
+                    model.showAll = true
+                } label: {
+                    Label("All agents (\(store.agents.count))", systemImage: "list.bullet")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .reveal(isOpen, model.finishedAgents.count + 1)
+            } else {
+                ForEach(Array(model.cards.enumerated()), id: \.element.id) { index, agent in
+                    BlockedAgentCard(agent: agent, model: model)
+                        .reveal(isOpen, index + 1)
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)),
+                                                removal: .opacity.combined(with: .move(edge: .trailing))))
+                }
+                VStack(spacing: 2) {
+                    ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, agent in
+                        AgentRow(agent: agent, model: model)
+                            .reveal(isOpen, model.cards.count + index + 1)
+                    }
+                }
+                PalettePicker().reveal(isOpen, model.cards.count + model.rows.count + 1)
             }
-            PalettePicker().reveal(isOpen, model.cards.count + model.rows.count + 1)
         }
         .padding(14)
         .animation(reduceMotion ? Motion.fade : Motion.smooth, value: store.agents)
+        .animation(reduceMotion ? Motion.fade : Motion.smooth, value: model.mode)
         .task(id: isOpen) {
             // Names follow the agents' work while the panel is open.
             while isOpen && !Task.isCancelled {
@@ -385,6 +401,33 @@ struct CheckShape: Shape {
     }
 }
 
+/// A finished agent's summary, shown on hover while the orb glows green.
+struct FinishedCard: View {
+    let agent: Agent
+    let model: PanelModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                Circle().fill(Palette.finished).frame(width: 7, height: 7)
+                    .shadow(color: Palette.finished.opacity(0.8), radius: 3)
+                Text(model.name(for: agent)).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Spacer(minLength: 4)
+                Text("finished")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Palette.finished)
+                    .padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(Palette.finished.opacity(0.16), in: Capsule())
+            }
+            SummaryView(agent: agent, model: model, showsTitle: false)
+        }
+        .padding(12)
+        .background(Palette.finished.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .strokeBorder(Palette.finished.opacity(0.22), lineWidth: 0.75))
+    }
+}
+
 struct AgentRow: View {
     let agent: Agent
     let model: PanelModel
@@ -434,13 +477,25 @@ struct AgentRow: View {
 struct SummaryView: View {
     let agent: Agent
     let model: PanelModel
+    /// False when the card header already shows the title.
+    var showsTitle = true
+    /// Files changed starts collapsed; a click on its header opens it.
+    @State private var filesOpen = false
+
+    private var draft: Binding<String> {
+        Binding(get: { model.drafts[agent.paneID] ?? "" },
+                set: { model.drafts[agent.paneID] = $0 })
+    }
+
+    /// A next task can go to an agent that is not waiting or working.
+    private var takesNextTask: Bool { agent.status == .done || agent.status == .idle }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let summary = model.summaries[agent.paneID], summary == TranscriptSummary() {
                 Text("No work in this session yet").font(.system(size: 11.5)).foregroundStyle(.secondary)
             } else if let summary = model.summaries[agent.paneID] {
-                if let title = summary.title {
+                if showsTitle, let title = summary.title {
                     Text(title).font(.system(size: 12, weight: .semibold))
                 }
                 if let request = summary.lastRequest {
@@ -449,13 +504,29 @@ struct SummaryView: View {
                 stats(summary)
                 if !summary.filesChanged.isEmpty {
                     VStack(alignment: .leading, spacing: 2) {
-                        caption("Files changed")
-                        ForEach(summary.filesChanged.suffix(5), id: \.self) { path in
-                            Label((path as NSString).lastPathComponent, systemImage: "doc.text")
-                                .font(.system(size: 11)).foregroundStyle(.secondary)
-                                .help(path)
+                        Button {
+                            filesOpen.toggle()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .rotationEffect(.degrees(filesOpen ? 90 : 0))
+                                caption("Files changed (\(summary.filesChanged.count))")
+                            }
+                            .foregroundStyle(.tertiary)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if filesOpen {
+                            ForEach(summary.filesChanged.suffix(5), id: \.self) { path in
+                                Label((path as NSString).lastPathComponent, systemImage: "doc.text")
+                                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                                    .help(path)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.9), value: filesOpen)
                 }
                 if let message = summary.lastMessage {
                     section("Last message", message, lines: 4)
@@ -469,6 +540,32 @@ struct SummaryView: View {
             } else {
                 ProgressView().controlSize(.small)
             }
+            if model.sentNext.contains(agent.paneID) {
+                Label("Sent", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(Palette.finished)
+                    .transition(.opacity)
+            } else if takesNextTask {
+                HStack(spacing: 6) {
+                    TextField("Next task for this agent", text: draft)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .onSubmit { send() }
+                    Button(action: send) {
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 17))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(draft.wrappedValue.isEmpty ? Color.white.opacity(0.25) : Color.accentColor)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .disabled(model.sending.contains(agent.paneID))
+            }
+            if let error = model.errors[agent.paneID] {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11)).foregroundStyle(.orange)
+            }
             Button {
                 Task { await model.focus(agent.paneID) }
             } label: {
@@ -479,6 +576,7 @@ struct SummaryView: View {
             .foregroundStyle(Color.accentColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeOut(duration: 0.2), value: model.sentNext.contains(agent.paneID))
         .task(id: agent.status) {
             // A status change means new work; while working, follow the transcript as it grows.
             await model.refreshSummary(agent.paneID)
@@ -487,6 +585,10 @@ struct SummaryView: View {
                 await model.refreshSummary(agent.paneID)
             }
         }
+    }
+
+    private func send() {
+        Task { await model.sendNext(for: agent.paneID) }
     }
 
     private func caption(_ text: String) -> some View {
@@ -521,7 +623,7 @@ extension AgentStatus {
         switch self {
         case .blocked: Palette.waiting
         case .working: Palette.working
-        case .done: Palette.calm
+        case .done: Palette.finished
         case .idle, .unknown: .gray
         }
     }

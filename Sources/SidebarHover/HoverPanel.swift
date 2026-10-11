@@ -128,6 +128,7 @@ final class HoverController {
             return
         }
         presentation.isOpen = false
+        model.panelClosed()
         panel.resignKey()
         // Hide only after the collapse has fully settled into the tab.
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.closeDuration + 0.05) { [weak self] in

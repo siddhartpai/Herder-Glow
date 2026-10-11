@@ -34,13 +34,32 @@ private func agents(_ statuses: AgentStatus...) -> [Agent] {
 }
 
 @Test func blueWhenWorkingAndNoneBlocked() {
-    #expect(LightColor.compute(connected: true, agents: agents(.working, .done)) == .blue)
+    #expect(LightColor.compute(connected: true, agents: agents(.working, .idle)) == .blue)
 }
 
-@Test func greenWhenAllDoneIdleOrUnknown() {
+@Test func greenWhenAnAgentFinishedAndIsUnseen() {
     #expect(LightColor.compute(connected: true, agents: agents(.done, .idle, .unknown)) == .green)
 }
 
-@Test func greenWhenNoAgents() {
-    #expect(LightColor.compute(connected: true, agents: []) == .green)
+@Test func calmWhenFinishedAgentWasSeen() {
+    var done = Agent(paneID: "p0", title: "", cwd: "", status: .done)
+    done.completion = 7
+    #expect(LightColor.compute(connected: true, agents: [done], seen: ["p0": 7]) == .calm)
+}
+
+@Test func finishedBeatsWorkingButNotWaiting() {
+    #expect(LightColor.compute(connected: true, agents: agents(.working, .done)) == .green)
+    #expect(LightColor.compute(connected: true, agents: agents(.done, .blocked)) == .red)
+}
+
+@Test func calmWhenAllIdle() {
+    #expect(LightColor.compute(connected: true, agents: agents(.idle, .unknown)) == .calm)
+}
+
+@Test func calmWhenNoAgents() {
+    #expect(LightColor.compute(connected: true, agents: []) == .calm)
+}
+
+@Test func agentReadsCompletionSeq() {
+    #expect(Agent(json: ["pane_id": "w1:p1", "agent_status": "done", "completion_seq": 826])?.completion == 826)
 }

@@ -54,3 +54,13 @@ import Foundation
         return
     }
 }
+
+@Test func promptSendsAgentPrompt() async throws {
+    let server = try FakeHerdrServer { _ in [#"{"id":"1","result":{"type":"ok"}}"#] }
+    defer { server.stop() }
+    try await HerdrClient(socketPath: server.path).prompt("w1:p1", "add tests")
+    let params = server.requests.first?["params"] as? [String: Any]
+    #expect(server.requests.first?["method"] as? String == "agent.prompt")
+    #expect(params?["target"] as? String == "w1:p1")
+    #expect(params?["text"] as? String == "add tests")
+}

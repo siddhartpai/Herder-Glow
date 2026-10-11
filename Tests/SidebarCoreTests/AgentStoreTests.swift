@@ -18,7 +18,7 @@ import Testing
     api.agents = [agent("w1:p1", .working), agent("w1:p2", .blocked)]
     let store = AgentStore(api: api)
     await store.refresh()
-    api.emit(.statusChanged(paneID: "w1:p2", status: .done))
+    api.emit(.statusChanged(paneID: "w1:p2", status: .idle))
     #expect(await eventually { store.color == .blue })
 }
 
@@ -91,4 +91,29 @@ import Testing
     let store = AgentStore(api: api)
     await store.refresh()
     #expect(PanelModel(store: store, api: api).cards.map(\.paneID) == ["w1:p2", "w1:p1"])
+}
+
+@MainActor @Test func markSeenClearsFinishedGlow() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5
+    api.agents = [done, agent("w1:p2", .idle)]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    #expect(store.color == .green)
+    #expect(store.finished.map(\.paneID) == ["w1:p1"])
+    store.markSeen(["w1:p1"])
+    #expect(store.color == .calm)
+    #expect(store.finished.isEmpty)
+}
+
+@MainActor @Test func newFinishEventGlowsAgainAfterSeen() async {
+    let api = FakeAPI()
+    var done = agent("w1:p1", .done); done.completion = 5
+    api.agents = [done]
+    let store = AgentStore(api: api)
+    await store.refresh()
+    store.markSeen(["w1:p1"])
+    store.apply(.statusChanged(paneID: "w1:p1", status: .working))
+    store.apply(.statusChanged(paneID: "w1:p1", status: .done))
+    #expect(store.color == .green)
 }

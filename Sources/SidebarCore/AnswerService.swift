@@ -4,12 +4,14 @@ public enum AnswerError: Error, Equatable, CustomStringConvertible {
     case promptChanged
     case chooseOption
     case useTerminal
+    case agentBusy
 
     public var description: String {
         switch self {
         case .promptChanged: "Prompt changed"
         case .chooseOption: "Choose an option above"
         case .useTerminal: "Answer this prompt in the terminal"
+        case .agentBusy: "Agent is busy"
         }
     }
 }
@@ -37,6 +39,14 @@ public struct AnswerService: Sendable {
         if let freeText { try await api.sendKeys(paneID, [String(freeText.number)]) }
         try await api.sendText(paneID, text)
         try await api.sendKeys(paneID, ["enter"])
+    }
+
+    /// Gives a finished or idle agent its next task. Refused while it waits or works,
+    /// so the text never lands in a question menu or interrupts a running job.
+    public func nextTask(text: String, paneID: String) async throws {
+        let status = try await api.getAgent(paneID).status
+        guard status == .done || status == .idle else { throw AnswerError.agentBusy }
+        try await api.prompt(paneID, text)
     }
 
     private func ensureBlocked(_ paneID: String) async throws {

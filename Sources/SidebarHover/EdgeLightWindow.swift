@@ -111,7 +111,10 @@ final class Palette {
 
     static var waiting: Color { shared.theme.waiting }
     static var working: Color { shared.theme.working }
-    static var calm: Color { shared.theme.calm }
+    /// The theme's third color marks a finished job.
+    static var finished: Color { shared.theme.calm }
+    /// Nothing needs you: a soft white, the same in every theme.
+    static let idle = Color(white: 0.85)
     static var glass: Color { shared.theme.glass }
     static let offline = Color(white: 0.45)
 }
@@ -121,7 +124,8 @@ extension LightColor {
         switch self {
         case .red: Palette.waiting
         case .blue: Palette.working
-        case .green: Palette.calm
+        case .green: Palette.finished
+        case .calm: Palette.idle
         case .grey: Palette.offline
         }
     }
@@ -136,11 +140,14 @@ struct LightView: View {
 
     private var waiting: Int { store.blocked.count }
     private var needsAttention: Bool { waiting > 0 }
+    private var finished: Int { store.finished.count }
+    /// Red for a waiting agent, else green for a finished job.
+    private var glow: Color? { needsAttention ? Palette.waiting : finished > 0 ? Palette.finished : nil }
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            if needsAttention {
-                AttentionGlow(still: reduceMotion).transition(.opacity)
+            if let glow {
+                AttentionGlow(color: glow, still: reduceMotion, fast: needsAttention).transition(.opacity)
             }
             capsule
                 .overlay(alignment: .topTrailing) {
@@ -148,12 +155,12 @@ struct LightView: View {
                         CountBadge(count: waiting).offset(x: -2, y: -8).transition(.scale.combined(with: .opacity))
                     }
                 }
-                .keyframeAnimator(initialValue: CGFloat(0), trigger: waiting) { view, offset in
+                .keyframeAnimator(initialValue: CGFloat(0), trigger: [waiting, finished]) { view, offset in
                     view.offset(x: offset)
                 } keyframes: { _ in
                     // Nudge out of the edge and spring back when another agent starts waiting.
                     KeyframeTrack {
-                        if reduceMotion || !needsAttention {
+                        if reduceMotion || glow == nil {
                             LinearKeyframe(CGFloat(0), duration: 0.01)
                         } else {
                             SpringKeyframe(CGFloat(-6), duration: 0.14, spring: .snappy)
@@ -174,8 +181,8 @@ struct LightView: View {
             .padding(.trailing, 5)
             .frame(width: Self.pillWidth, height: Self.pillHeight, alignment: .trailing)
             .background(shape.fill(Color.black.opacity(0.85)))
-            .overlay(NotchShape(closed: false).stroke(needsAttention ? Palette.waiting.opacity(0.55) : Color.white.opacity(0.14),
-                                  lineWidth: needsAttention ? 1 : 0.5))
+            .overlay(NotchShape(closed: false).stroke(glow?.opacity(0.55) ?? Color.white.opacity(0.14),
+                                  lineWidth: glow == nil ? 0.5 : 1))
     }
 }
 
@@ -256,13 +263,16 @@ private struct CountBadge: View {
     }
 }
 
-/// Soft red halo behind the orb that breathes while an agent waits.
+/// Soft halo behind the orb that breathes while an agent waits or has finished.
 private struct AttentionGlow: View {
+    let color: Color
     let still: Bool
+    /// Fast for a waiting agent, slower for a finished job.
+    let fast: Bool
 
     var body: some View {
         let halo = Circle()
-            .fill(Palette.waiting)
+            .fill(color)
             .frame(width: 30, height: 30)
             .blur(radius: 10)
             .offset(x: 4)
@@ -271,7 +281,7 @@ private struct AttentionGlow: View {
         } else {
             halo.phaseAnimator([false, true]) { view, bright in
                 view.opacity(bright ? 0.8 : 0.2).scaleEffect(bright ? 1.2 : 0.9)
-            } animation: { _ in .easeInOut(duration: 0.8) }
+            } animation: { _ in .easeInOut(duration: fast ? 0.8 : 1.4) }
         }
     }
 }

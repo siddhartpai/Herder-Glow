@@ -133,7 +133,7 @@ private final class Counter: @unchecked Sendable {
 
 @MainActor @Test func refreshSkipsClosedRows() async {
     let api = FakeAPI()
-    var claude = agent("w1:p1", .done)
+    var claude = agent("w1:p1", .idle)
     claude.sessionID = "abc-123"
     api.agents = [claude]
     let store = AgentStore(api: api)

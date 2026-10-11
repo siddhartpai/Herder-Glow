@@ -19,6 +19,31 @@ public final class PanelModel {
     public private(set) var summaries: [String: TranscriptSummary] = [:]
     /// Transcript titles, used as agent names.
     public private(set) var titles: [String: String] = [:]
+    /// Shows the full panel even when only finished summaries would show.
+    public var showAll = false
+    /// Finished agents whose summaries this hover showed; seen when the panel closes.
+    private var shownFinished: [String] = []
+
+    public enum Mode: Equatable, Sendable {
+        /// Only finished agents' summaries.
+        case finished
+        /// Waiting cards and all agent rows.
+        case all
+    }
+
+    /// Panes given a next task in the last moment, so the view can show "Sent".
+    public private(set) var sentNext: Set<String> = []
+
+    public var mode: Mode {
+        cards.isEmpty && !finishedAgents.isEmpty && !showAll ? .finished : .all
+    }
+
+    /// Finished agents shown in this hover, else those not seen yet; newest first.
+    /// Cards shown in a hover stay until it closes, even after the agent starts its next task.
+    public var finishedAgents: [Agent] {
+        let panes = shownFinished.isEmpty ? store.finished.map(\.paneID) : shownFinished
+        return newestFirst.filter { panes.contains($0.paneID) }
+    }
 
     private let api: any HerdrAPI
     private let answers: AnswerService
@@ -101,14 +126,23 @@ public final class PanelModel {
 
     /// Reloads the summary of the open row; the agent may have done more since it was loaded.
     public func refreshSummary(_ paneID: String) async {
-        guard expanded == paneID else { return }
+        guard expanded == paneID || (mode == .finished && shownFinished.contains(paneID)) else { return }
         await loadSummary(for: paneID)
     }
 
     /// Called each time the panel opens.
     public func panelOpened() async {
+        shownFinished = mode == .finished ? finishedAgents.map(\.paneID) : []
         await reloadBlocked()
+        for paneID in shownFinished { await loadSummary(for: paneID) }
         if let expanded { await refreshSummary(expanded) }
+    }
+
+    /// Marks the finished summaries shown in this hover as seen, and resets the view.
+    public func panelClosed() {
+        store.markSeen(shownFinished)
+        shownFinished = []
+        showAll = false
     }
 
     /// The transcript title, else the terminal title.
@@ -138,6 +172,26 @@ public final class PanelModel {
             summaries[paneID] = summary
         } else {
             await reload(paneID)
+        }
+    }
+
+    /// Sends the draft as the agent's next task.
+    public func sendNext(for paneID: String) async {
+        let text = drafts[paneID, default: ""].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        errors[paneID] = nil
+        sending.insert(paneID)
+        defer { sending.remove(paneID) }
+        do {
+            try await answers.nextTask(text: text, paneID: paneID)
+            drafts[paneID] = nil
+            sentNext.insert(paneID)
+            Task { [weak self, answeredDuration] in
+                try? await Task.sleep(for: answeredDuration)
+                self?.sentNext.remove(paneID)
+            }
+        } catch {
+            errors[paneID] = String(describing: error)
         }
     }
 

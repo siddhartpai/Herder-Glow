@@ -6,7 +6,12 @@ public final class AgentStore {
     public private(set) var agents: [Agent] = []
     public private(set) var connected = false
 
-    public var color: LightColor { LightColor.compute(connected: connected, agents: agents) }
+    /// Last completion number seen for each pane.
+    public private(set) var seen: [String: Int] = [:]
+
+    public var color: LightColor { LightColor.compute(connected: connected, agents: agents, seen: seen) }
+    /// Agents that finished a job you have not seen yet.
+    public var finished: [Agent] { agents.filter { $0.isUnseenFinish(seen) } }
     public var blocked: [Agent] { agents.filter { $0.status == .blocked } }
     public var others: [Agent] { agents.filter { $0.status != .blocked } }
 
@@ -49,12 +54,19 @@ public final class AgentStore {
         }
     }
 
+    public func markSeen(_ paneIDs: [String]) {
+        for agent in agents where paneIDs.contains(agent.paneID) {
+            seen[agent.paneID] = agent.completion
+        }
+    }
+
     public func apply(_ event: HerdrEvent) {
         switch event {
         case let .statusChanged(paneID, status):
             if let index = agents.firstIndex(where: { $0.paneID == paneID }) {
                 agents[index].status = status
                 agents[index].activity = (agents.map(\.activity).max() ?? 0) + 1
+                if status == .done { agents[index].completion += 1 }
             }
         case .topologyChanged:
             Task { await refresh() }
