@@ -5,7 +5,7 @@ import SidebarCore
 /// Window on the right screen edge that shows the traffic light. It is wider and taller than
 /// the light, so the attention glow has room; only the light itself reports hover.
 final class EdgeLightWindow: NSPanel {
-    static let size = NSSize(width: 44, height: 96)
+    static let size = NSSize(width: 80, height: 96)
 
     init(store: AgentStore, onHover: @escaping (Bool) -> Void) {
         super.init(contentRect: NSRect(origin: .zero, size: Self.size),
@@ -181,8 +181,7 @@ struct LightView: View {
             .padding(.trailing, 5)
             .frame(width: Self.pillWidth, height: Self.pillHeight, alignment: .trailing)
             .background(shape.fill(Color.black.opacity(0.85)))
-            .overlay(NotchShape(closed: false).stroke(glow?.opacity(0.55) ?? Color.white.opacity(0.14),
-                                  lineWidth: glow == nil ? 0.5 : 1))
+            .overlay(NotchShape(closed: false).stroke(Color.white.opacity(0.14), lineWidth: 0.5))
     }
 }
 
