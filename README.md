@@ -28,6 +28,16 @@ Herder-Glow puts a small light on the right edge of your Mac screen. The light s
 
 ## Install
 
+1. Download `Herder-Glow-0.1.0-macos.zip` from the [latest release](https://github.com/siddhartpai/Herder-Glow/releases/latest).
+2. Unzip it and move `Herder-Glow.app` to `/Applications`.
+3. Run this command in Terminal. The app is not notarized by Apple, so macOS blocks it until you remove the quarantine flag.
+   ```sh
+   xattr -cr /Applications/Herder-Glow.app
+   ```
+4. Open the app. The light appears on the right edge of your main screen.
+
+### Build from source
+
 1. Clone the repository.
    ```sh
    git clone https://github.com/siddhartpai/Herder-Glow.git
