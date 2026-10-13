@@ -2,3 +2,6 @@
 .swiftpm/
 *.app
 .serena/
+video/demo/renders/
+video/demo/snapshots/
+node_modules/

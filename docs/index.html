@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SidebarHover — your coding agents, one glance away</title>
+  <meta name="description" content="A native macOS light on the edge of your screen. It shows the state of your herdr coding agents and lets you answer a waiting agent without a terminal switch.">
+  <meta property="og:title" content="SidebarHover">
+  <meta property="og:description" content="Your coding agents, one glance away. A native macOS light for herdr agents.">
+  <meta property="og:image" content="https://siddhartpai.github.io/sidebar-hover/assets/poster.jpg">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --waiting: #ff4a59; --working: #428fff; --calm: #38db8c; --bg: #07070b; --fg: #f4f4f6; --muted: rgba(244,244,246,0.64); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background:
+        radial-gradient(1100px 600px at 15% -5%, #1b2140 0%, transparent 60%),
+        radial-gradient(900px 600px at 95% 40%, #2a1430 0%, transparent 60%),
+        var(--bg);
+      color: var(--fg); font-family: Inter, system-ui, sans-serif; line-height: 1.6;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+    code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+    header.nav { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
+    .brand { font-family: Montserrat, sans-serif; font-weight: 900; letter-spacing: -0.02em; font-size: 20px; display: flex; gap: 10px; align-items: center; }
+    .nav a.gh { font-size: 15px; text-decoration: none; color: var(--muted); }
+    .nav a.gh:hover { color: var(--fg); }
+
+    .hero { text-align: center; padding: 80px 0 40px; }
+    .hero h1 { font-family: Montserrat, sans-serif; font-weight: 900; font-size: clamp(48px, 9vw, 104px); letter-spacing: -0.04em; line-height: 1; }
+    .hero p.tag { font-family: Montserrat, sans-serif; font-size: clamp(19px, 2.6vw, 28px); color: var(--muted); margin-top: 20px; }
+    .orb { width: 14px; height: 14px; border-radius: 50%; display: inline-block; color: var(--waiting);
+      background: radial-gradient(circle at 38% 32%, rgba(255,255,255,0.95) 0%, currentColor 55%, currentColor 100%);
+      box-shadow: 0 0 10px currentColor, 0 0 22px currentColor; }
+    .hero .orb { width: 46px; height: 46px; margin-bottom: 40px; animation: cycle 9s infinite, breathe 1.6s ease-in-out infinite; }
+    @keyframes breathe { 50% { transform: scale(0.86); opacity: 0.75; } }
+    @keyframes cycle { 0%, 30% { color: var(--working); } 33%, 63% { color: var(--waiting); } 66%, 97% { color: var(--calm); } 100% { color: var(--working); } }
+    .cta { display: flex; gap: 14px; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
+    .btn { padding: 13px 24px; border-radius: 14px; font-weight: 600; text-decoration: none; font-size: 16px; }
+    .btn.primary { background: var(--fg); color: #0b0b10; }
+    .btn.ghost { border: 1px solid rgba(255,255,255,0.2); }
+    .btn:hover { opacity: 0.88; }
+
+    .video { margin: 40px auto 0; border-radius: 22px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 40px 120px rgba(0,0,0,0.6); background: #000; }
+    .video video { display: block; width: 100%; height: auto; }
+
+    section { padding: 90px 0 0; }
+    h2 { font-family: Montserrat, sans-serif; font-weight: 700; font-size: clamp(30px, 4vw, 44px); letter-spacing: -0.02em; line-height: 1.15; }
+    .lead { color: var(--muted); font-size: 18px; margin-top: 12px; max-width: 680px; }
+
+    .lights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+    .light { padding: 26px; border-radius: 22px; border: 1px solid; }
+    .light h3 { font-size: 20px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .light p { color: var(--muted); }
+    .light.blue { background: rgba(66,143,255,0.07); border-color: rgba(66,143,255,0.28); }
+    .light.red { background: rgba(255,74,89,0.07); border-color: rgba(255,74,89,0.28); }
+    .light.green { background: rgba(56,219,140,0.07); border-color: rgba(56,219,140,0.28); }
+    .light.blue .orb { color: var(--working); } .light.green .orb { color: var(--calm); }
+
+    .features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 36px; }
+    .feature { padding: 24px 26px; border-radius: 20px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); }
+    .feature h3 { font-size: 18px; margin-bottom: 6px; }
+    .feature p { color: var(--muted); font-size: 15.5px; }
+    .shot { margin-top: 36px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+    .shot img { display: block; width: 100%; }
+
+    ol.steps { margin-top: 30px; list-style: none; counter-reset: s; display: grid; gap: 14px; }
+    ol.steps li { counter-increment: s; display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start; }
+    ol.steps li::before { content: counter(s); width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
+    pre { background: #11121a; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 18px; overflow-x: auto; font-size: 14.5px; margin-top: 8px; color: #c9cbe0; }
+    .req { margin-top: 26px; color: var(--muted); font-size: 15.5px; }
+    .req code { color: var(--fg); }
+
+    footer { padding: 100px 0 60px; color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+    /* The page's own edge light */
+    .edge { position: fixed; right: 0; top: 34vh; width: 26px; height: 64px; background: rgba(0,0,0,0.88);
+      border: 1px solid rgba(255,255,255,0.14); border-right: none; border-radius: 9px 0 0 9px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; z-index: 5; }
+    .edge .orb { width: 11px; height: 11px; animation: cycle 9s infinite, breathe 1.6s ease-in-out infinite; }
+
+    @media (max-width: 760px) { .lights, .features { grid-template-columns: 1fr; } section { padding-top: 64px; } }
+    @media (prefers-reduced-motion: reduce) { .orb { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="edge" aria-hidden="true"><span class="orb"></span></div>
+
+  <div class="wrap">
+    <header class="nav">
+      <div class="brand"><span class="orb" style="color:var(--waiting)"></span>SidebarHover</div>
+      <a class="gh" href="https://github.com/siddhartpai/sidebar-hover">GitHub ↗</a>
+    </header>
+
+    <div class="hero">
+      <span class="orb" aria-hidden="true"></span>
+      <h1>SidebarHover</h1>
+      <p class="tag">Your coding agents, one glance away.</p>
+      <div class="cta">
+        <a class="btn primary" href="#install">Install</a>
+        <a class="btn ghost" href="https://github.com/siddhartpai/sidebar-hover">View source</a>
+      </div>
+    </div>
+
+    <div class="video">
+      <video src="assets/demo.mp4" poster="assets/poster.jpg" autoplay muted loop playsinline controls preload="metadata"></video>
+    </div>
+
+    <section>
+      <h2>One light. Three colors.</h2>
+      <p class="lead">A small light sits on the right edge of your screen. It shows the most urgent state of all your herdr agents, on every Space and over full-screen apps.</p>
+      <div class="lights">
+        <div class="light blue"><h3><span class="orb"></span>Blue</h3><p>Your agents are working. Nothing needs you.</p></div>
+        <div class="light red"><h3><span class="orb"></span>Red</h3><p>An agent waits for an answer. The light glows and nudges out of the edge.</p></div>
+        <div class="light green"><h3><span class="orb"></span>Green</h3><p>A job is done. Hover to read what the agent did.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Answer without a terminal switch.</h2>
+      <p class="lead">Hover over the light to open the panel. Answer the agent there, then go back to your work.</p>
+      <div class="features">
+        <div class="feature"><h3>See the question</h3><p>The panel shows the question the agent asks, with one button for each option.</p></div>
+        <div class="feature"><h3>Answer with one key</h3><p>Press 1–9 to select an option, or type a free-text reply.</p></div>
+        <div class="feature"><h3>Read the summary</h3><p>A finished agent shows a short summary of its work, from its transcript.</p></div>
+        <div class="feature"><h3>Jump to the agent</h3><p>Click a card to open that agent's pane in herdr.</p></div>
+        <div class="feature"><h3>Recent agents first</h3><p>Agent names follow the title of their work. The most recent agents are at the top.</p></div>
+        <div class="feature"><h3>Six palettes</h3><p>Default, Pastel, Neon, Sunset, Ocean and Mono. Pick one in the panel footer.</p></div>
+      </div>
+      <div class="shot"><img src="assets/summary.jpg" alt="The SidebarHover panel shows a finished agent with a summary of its work"></div>
+    </section>
+
+    <section id="install">
+      <h2>Install</h2>
+      <p class="lead">SidebarHover is a native Swift app. You build it from source in about one minute.</p>
+      <ol class="steps">
+        <li><div>Clone the repository.<pre>git clone https://github.com/siddhartpai/sidebar-hover.git
+cd sidebar-hover</pre></div></li>
+        <li><div>Build the app. The script puts <code>SidebarHover.app</code> in <code>~/Applications</code>.<pre>scripts/bundle.sh</pre></div></li>
+        <li><div>Open the app. The light appears on the right edge of your main screen.<pre>open ~/Applications/SidebarHover.app</pre></div></li>
+      </ol>
+      <p class="req">Requirements: macOS 14 or later, a Swift 6 toolchain (Xcode or the Command Line Tools), and herdr running. The app connects to the herdr socket at <code>$HERDR_SOCKET_PATH</code>, or <code>~/.config/herdr/herdr.sock</code>.</p>
+    </section>
+
+    <footer>
+      <span>SidebarHover · MIT License</span>
+      <a href="https://github.com/siddhartpai/sidebar-hover">github.com/siddhartpai/sidebar-hover</a>
+    </footer>
+  </div>
+</body>
+</html>

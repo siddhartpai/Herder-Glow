@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #07070b; }
+      #root {
+        position: relative; width: 100%; height: 100%; overflow: hidden;
+        font-family: Inter, sans-serif; color: #f4f4f6;
+        --waiting: #ff4a59; --working: #428fff; --calm: #38db8c;
+      }
+
+      /* Desktop */
+      #wall {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(1200px 700px at 18% 20%, #1b2140 0%, transparent 60%),
+          radial-gradient(900px 600px at 85% 90%, #2a1430 0%, transparent 60%),
+          #08080d;
+      }
+      #menubar {
+        position: absolute; left: 0; top: 0; width: 100%; height: 38px;
+        background: rgba(20, 20, 28, 0.7); border-bottom: 1px solid rgba(255,255,255,0.06);
+        display: flex; align-items: center; gap: 28px; padding: 0 26px;
+        font-size: 17px; color: rgba(255,255,255,0.75);
+      }
+      #menubar b { color: #fff; font-weight: 700; }
+
+      #editor {
+        position: absolute; left: 90px; top: 110px; width: 1180px; height: 860px;
+        background: #11121a; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 40px 120px rgba(0,0,0,0.6); overflow: hidden;
+      }
+      #editor .bar {
+        height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 20px;
+        background: #171823; border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      #editor .bar i { width: 14px; height: 14px; border-radius: 50%; display: block; }
+      #editor .bar span { margin-left: 18px; font-family: "JetBrains Mono", monospace; font-size: 16px; color: rgba(255,255,255,0.5); }
+      #code {
+        padding: 30px 36px; font-family: "JetBrains Mono", monospace; font-size: 21px; line-height: 1.75;
+        color: #c9cbe0; white-space: pre;
+      }
+      .k { color: #c792ea; } .f { color: #82aaff; } .s { color: #c3e88d; } .c { color: #7d82a8; }
+
+      /* Captions */
+      #captions { position: absolute; left: 140px; bottom: 120px; width: 1000px; height: 200px; }
+      .cap {
+        position: absolute; left: 0; bottom: 0; width: 1000px;
+        font-family: Montserrat, sans-serif; font-weight: 700; font-size: 58px; line-height: 1.12;
+        letter-spacing: -0.02em; color: #fff; opacity: 0;
+        text-shadow: 0 6px 30px rgba(0,0,0,0.6);
+      }
+      .cap em { font-style: normal; }
+      .cap .red { color: var(--waiting); } .cap .green { color: var(--calm); } .cap .blue { color: var(--working); }
+      #capScrim {
+        position: absolute; left: 0; bottom: 0; width: 1920px; height: 560px; opacity: 0;
+        background: linear-gradient(to top, rgba(5,5,10,0.94) 0%, rgba(5,5,10,0.75) 45%, rgba(5,5,10,0) 100%);
+      }
+
+      /* Edge light: notch on the right edge */
+      #light { position: absolute; right: 0; top: 330px; width: 44px; height: 108px; }
+      #notch {
+        position: absolute; right: 0; top: 0; width: 44px; height: 108px;
+        background: rgba(0,0,0,0.88); border: 1px solid rgba(255,255,255,0.14); border-right: none;
+        border-radius: 12px 0 0 12px;
+      }
+      #halo {
+        position: absolute; right: -10px; top: 14px; width: 80px; height: 80px; border-radius: 50%;
+        background: var(--waiting); filter: blur(20px); opacity: 0;
+      }
+      .orb {
+        position: absolute; width: 20px; height: 20px; border-radius: 50%;
+      }
+      #orb { right: 12px; top: 44px; }
+      .orb .fill {
+        position: absolute; inset: 0; border-radius: 50%;
+        background: radial-gradient(circle at 38% 32%, rgba(255,255,255,0.95) 0%, currentColor 55%, currentColor 100%);
+        box-shadow: 0 0 8px currentColor, 0 0 18px currentColor;
+      }
+      #orbBlue { color: var(--working); }
+      #orbRed { color: var(--waiting); opacity: 0; }
+      #orbGreen { color: var(--calm); opacity: 0; }
+
+      /* Panel (2x scale of the 380 pt panel) */
+      #panel {
+        position: absolute; right: 64px; top: 150px; width: 760px; height: 780px;
+        border-radius: 36px; overflow: hidden; opacity: 0;
+        background: rgba(24, 24, 34, 0.86); border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 50px 140px rgba(0,0,0,0.65);
+      }
+      #panelInner { position: absolute; inset: 0; padding: 28px; }
+      .hdr { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+      .hdr h3 { font-size: 30px; font-weight: 700; }
+      .hdr .counts { font-size: 22px; font-weight: 700; display: flex; gap: 16px; }
+      .card {
+        position: relative; border-radius: 28px; padding: 24px; margin-bottom: 18px; overflow: hidden;
+      }
+      .card.wait { background: rgba(255,74,89,0.08); border: 1.5px solid rgba(255,74,89,0.3); }
+      .card.done { background: rgba(56,219,140,0.08); border: 1.5px solid rgba(56,219,140,0.3); }
+      .row1 { display: flex; align-items: center; gap: 14px; }
+      .dot { width: 14px; height: 14px; border-radius: 50%; }
+      .name { font-size: 26px; font-weight: 700; flex: 1; }
+      .hint {
+        font-size: 18px; color: rgba(255,255,255,0.6); padding: 4px 12px; border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+      .chip { font-size: 19px; font-weight: 700; padding: 4px 14px; border-radius: 20px; }
+      .cwd { font-size: 20px; color: rgba(255,255,255,0.4); margin: 12px 0 14px; font-family: "JetBrains Mono", monospace; }
+      .question {
+        font-size: 24px; line-height: 1.4; color: rgba(255,255,255,0.9); padding: 18px 20px;
+        background: rgba(0,0,0,0.45); border-radius: 20px; margin-bottom: 14px;
+      }
+      .opt {
+        display: flex; align-items: center; gap: 16px; padding: 12px 16px; margin-top: 8px;
+        border-radius: 18px; background: rgba(255,255,255,0.06); font-size: 23px;
+      }
+      .opt b {
+        width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1);
+        display: flex; align-items: center; justify-content: center; font-size: 19px;
+      }
+      #opt1Hover { position: absolute; inset: 0; border-radius: 18px; background: rgba(255,255,255,0.1); opacity: 0; }
+      .reply {
+        margin-top: 12px; padding: 14px 20px; border-radius: 18px; background: rgba(255,255,255,0.06);
+        font-size: 22px; color: rgba(255,255,255,0.35);
+      }
+      .agentRow { display: flex; align-items: center; gap: 16px; padding: 14px 16px; font-size: 24px; }
+      .agentRow .nm { flex: 1; }
+      #sent {
+        position: absolute; inset: 0; border-radius: 28px; opacity: 0;
+        background: rgba(30, 32, 44, 0.92);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      }
+      #sent svg { width: 76px; height: 76px; }
+      #sent span { font-size: 28px; font-weight: 700; color: #34c759; }
+      .summary { font-size: 23px; line-height: 1.5; color: rgba(255,255,255,0.85); margin-top: 14px; }
+      .summary li { margin-left: 26px; }
+      .openBtn {
+        display: inline-block; margin-top: 16px; font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.7);
+        padding: 8px 16px; border-radius: 14px; background: rgba(255,255,255,0.08);
+      }
+      #waitView, #doneView { position: absolute; left: 28px; right: 28px; top: 28px; }
+      #doneView { opacity: 0; }
+      .swatches { display: flex; gap: 14px; align-items: center; margin-top: 8px; padding: 0 8px; }
+      .swatches .lbl { font-size: 17px; font-weight: 700; color: rgba(255,255,255,0.35); flex: 1; letter-spacing: 0.08em; }
+      .sw { width: 30px; height: 30px; border-radius: 50%; }
+
+      /* Cursor */
+      #cursor { position: absolute; left: 0; top: 0; width: 40px; height: 48px; opacity: 0; }
+
+      /* Title + end cards */
+      #intro, #outro {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #07070b;
+      }
+      #outro { opacity: 0; }
+      .big {
+        font-family: Montserrat, sans-serif; font-weight: 900; font-size: 128px; letter-spacing: -0.04em; line-height: 1;
+      }
+      .sub { font-family: Montserrat, sans-serif; font-weight: 400; font-size: 44px; color: rgba(255,255,255,0.72); margin-top: 28px; }
+      .url {
+        font-family: "JetBrains Mono", monospace; font-size: 34px; color: rgba(255,255,255,0.9); margin-top: 54px;
+        padding: 16px 30px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.18);
+      }
+      .meta { font-family: "JetBrains Mono", monospace; font-size: 24px; color: rgba(255,255,255,0.45); margin-top: 26px; }
+      .heroOrb { position: relative; width: 70px; height: 70px; margin-bottom: 56px; }
+      .heroOrb .fill { position: absolute; inset: 0; border-radius: 50%; }
+      .heroOrb .glow {
+        position: absolute; left: -45px; top: -45px; width: 160px; height: 160px; border-radius: 50%;
+        filter: blur(34px); opacity: 0.7;
+      }
+      #heroOrbA, #heroOrbB { color: var(--waiting); }
+      #heroOrbA .fill, #heroOrbB .fill {
+        background: radial-gradient(circle at 38% 32%, rgba(255,255,255,0.95) 0%, currentColor 55%, currentColor 100%);
+        box-shadow: 0 0 20px currentColor;
+      }
+      #heroOrbA .glow, #heroOrbB .glow { background: currentColor; }
+      .tri { display: flex; gap: 22px; margin-bottom: 56px; }
+      .tri i { width: 26px; height: 26px; border-radius: 50%; display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="38" data-width="1920" data-height="1080">
+      <div id="wall"></div>
+      <div id="menubar"><b>Editor</b><span>File</span><span>Edit</span><span>View</span><span>Go</span></div>
+
+      <div id="editor">
+        <div class="bar">
+          <i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>
+          <span>billing/invoice.ts</span>
+        </div>
+        <div id="code" data-layout-allow-occlusion><span class="k">export async function</span> <span class="f">createInvoice</span>(order: Order) {
+  <span class="c">// Totals come from the line items, never the client.</span>
+  <span class="k">const</span> subtotal = order.items.<span class="f">reduce</span>(
+    (sum, item) =&gt; sum + item.price * item.qty, <span class="s">0</span>)
+  <span class="k">const</span> tax = <span class="f">taxFor</span>(order.region, subtotal)
+
+  <span class="k">return</span> db.invoice.<span class="f">create</span>({
+    data: {
+      orderId: order.id,
+      subtotal,
+      tax,
+      total: subtotal + tax,
+      status: <span class="s" data-layout-allow-occlusion>"open"</span>,
+    },
+  })
+}</div>
+      </div>
+
+      <div id="capScrim" data-layout-ignore></div>
+      <div id="captions" data-layout-allow-occlusion>
+        <div class="cap" id="cap1">One light on the edge of your screen. <em class="blue">Blue</em> means your agents are working.</div>
+        <div class="cap" id="cap2"><em class="red">Red</em> means an agent is waiting for you.</div>
+        <div class="cap" id="cap3">Hover to see the question. Answer it right here.</div>
+        <div class="cap" id="cap4">No terminal switch. Back to your work.</div>
+        <div class="cap" id="cap5"><em class="green">Green</em> means a job is done. Hover for the summary.</div>
+        <div class="cap" id="cap6">Six palettes. Pick one in the panel footer.</div>
+      </div>
+
+      <div id="light">
+        <div id="halo" data-layout-allow-overflow></div>
+        <div id="notch"></div>
+        <div id="orb" class="orb">
+          <div id="orbBlue" class="orb"><div class="fill"></div></div>
+          <div id="orbRed" class="orb"><div class="fill"></div></div>
+          <div id="orbGreen" class="orb"><div class="fill"></div></div>
+        </div>
+      </div>
+
+      <div id="panel">
+        <div id="panelInner">
+          <div id="waitView">
+            <div class="hdr">
+              <h3>Agents</h3>
+              <div class="counts"><span style="color:var(--waiting)">1 waiting</span><span style="color:var(--working)">2 working</span></div>
+            </div>
+            <div class="card wait" id="waitCard">
+              <div class="row1">
+                <div class="dot" style="background:var(--waiting);box-shadow:0 0 8px var(--waiting)"></div>
+                <div class="name">api-refactor</div>
+                <div class="hint">Press 1–3</div>
+                <div class="chip" style="color:var(--waiting);background:rgba(255,74,89,0.16)">waiting</div>
+              </div>
+              <div class="cwd">~/projects/acme-api</div>
+              <div class="question">Run the database migration 0042_add_invoice_index?</div>
+              <div class="opt" style="position:relative"><div id="opt1Hover"></div><b>1</b>Yes</div>
+              <div class="opt"><b>2</b>Yes, and don't ask again for migrations</div>
+              <div class="opt"><b>3</b>No, and tell the agent what to do</div>
+              <div class="reply">Reply to api-refactor…</div>
+              <div id="sent" data-layout-allow-occlusion>
+                <svg viewBox="0 0 30 30"><path id="check" d="M5.4 16.5 L12.6 23.4 L25.2 7.8" fill="none" stroke="#34c759" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="32" stroke-dashoffset="32"/></svg>
+                <span data-layout-allow-overlap>Sent</span>
+              </div>
+            </div>
+            <div class="agentRow">
+              <div class="dot" style="background:var(--working);box-shadow:0 0 8px var(--working)"></div>
+              <div class="nm">docs-writer</div>
+              <div class="chip" style="color:var(--working);background:rgba(66,143,255,0.16)">working</div>
+            </div>
+            <div class="agentRow">
+              <div class="dot" style="background:var(--working);box-shadow:0 0 8px var(--working)"></div>
+              <div class="nm">test-runner</div>
+              <div class="chip" style="color:var(--working);background:rgba(66,143,255,0.16)">working</div>
+            </div>
+            <div class="swatches">
+              <div class="lbl">DEFAULT</div>
+              <div class="sw" style="background:conic-gradient(#ff4a59,#428fff,#38db8c,#ff4a59)"></div>
+              <div class="sw" style="background:conic-gradient(#ff8c99,#99bfff,#99ebbf,#ff8c99)"></div>
+              <div class="sw" style="background:conic-gradient(#ff1a99,#00e5ff,#99ff1a,#ff1a99)"></div>
+              <div class="sw" style="background:conic-gradient(#ff5c33,#ffb833,#f28cbf,#ff5c33)"></div>
+              <div class="sw" style="background:conic-gradient(#ff7a66,#4db3f2,#40d9cc,#ff7a66)"></div>
+              <div class="sw" style="background:conic-gradient(#ffffff,#bfbfbf,#8c8c8c,#ffffff)"></div>
+            </div>
+          </div>
+
+          <div id="doneView">
+            <div class="hdr"><h3>Agents</h3><div class="counts"><span style="color:var(--working)">1 working</span></div></div>
+            <div class="card done">
+              <div class="row1">
+                <div class="dot" style="background:var(--calm);box-shadow:0 0 8px var(--calm)"></div>
+                <div class="name">test-runner</div>
+                <div class="chip" style="color:var(--calm);background:rgba(56,219,140,0.16)">finished</div>
+              </div>
+              <div class="summary">
+                <div>Added tests for the billing module.</div>
+                <ul>
+                  <li>14 new tests for invoice totals and tax</li>
+                  <li>Fixed a rounding bug in taxFor()</li>
+                  <li>All 212 tests pass</li>
+                </ul>
+              </div>
+              <div class="openBtn">↗ Open in herdr</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <svg id="cursor" viewBox="0 0 20 24">
+        <path d="M2 1 L2 19 L6.5 14.8 L9.6 22 L12.6 20.7 L9.6 13.8 L16 13.6 Z" fill="#fff" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/>
+      </svg>
+
+      <div id="intro" data-layout-allow-occlusion>
+        <div id="heroOrbA" class="heroOrb"><div class="glow" data-layout-allow-overflow></div><div class="fill"></div></div>
+        <div class="big" id="introTitle">SidebarHover</div>
+        <div class="sub" id="introSub">Your coding agents, one glance away.</div>
+      </div>
+
+      <div id="outro" data-layout-allow-occlusion>
+        <div class="tri"><i style="background:#ff4a59;box-shadow:0 0 18px #ff4a59"></i><i style="background:#428fff;box-shadow:0 0 18px #428fff"></i><i style="background:#38db8c;box-shadow:0 0 18px #38db8c"></i></div>
+        <div class="big">SidebarHover</div>
+        <div class="sub">A native macOS light for herdr agents.</div>
+        <div class="url">github.com/siddhartpai/sidebar-hover</div>
+        <div class="meta">macOS 14+ · Swift · open source</div>
+      </div>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const ease = "power3.out";
+      tl.set("#halo", { opacity: 0 }, 0);
+      tl.set("#panel", { opacity: 0, scale: 0.15, transformOrigin: "100% 32%" }, 0);
+
+      // Intro 0–4.2
+      tl.fromTo("#heroOrbA", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.9, ease: "back.out(1.6)" }, 0.2);
+      tl.fromTo("#heroOrbA .glow", { opacity: 0.25 }, { opacity: 0.85, duration: 0.6, yoyo: true, repeat: 5, ease: "sine.inOut" }, 0.4);
+      tl.fromTo("#introTitle", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease }, 0.6);
+      tl.fromTo("#introSub", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease }, 1.0);
+      tl.to("#intro", { opacity: 0, duration: 0.7, ease: "power2.inOut" }, 3.6);
+
+      // Desktop settle
+      tl.fromTo("#editor", { y: 30, opacity: 0.6 }, { y: 0, opacity: 1, duration: 1.0, ease }, 3.7);
+      tl.fromTo("#light", { x: 50 }, { x: 0, duration: 0.7, ease: "back.out(1.4)" }, 4.3);
+      tl.fromTo("#orbBlue", { scale: 0.86, opacity: 0.7 }, { scale: 1, opacity: 1, duration: 0.9, yoyo: true, repeat: 3, ease: "sine.inOut" }, 4.5);
+
+      // Caption helper
+      const cap = (id, start, end) => {
+        tl.fromTo(id, { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease }, start);
+        tl.to(id, { y: -16, opacity: 0, duration: 0.4, ease: "power2.in" }, end);
+      };
+      tl.to("#capScrim", { opacity: 1, duration: 0.6 }, 4.6);
+      cap("#cap1", 4.8, 8.4);
+
+      // Agent starts waiting: red, nudge, halo
+      tl.to("#orbRed", { opacity: 1, duration: 0.4 }, 8.6);
+      tl.to("#orbBlue", { opacity: 0, duration: 0.4 }, 8.6);
+      tl.to("#light", { x: -12, duration: 0.14, ease: "power2.out" }, 8.6);
+      tl.to("#light", { x: 0, duration: 0.5, ease: "elastic.out(1.2, 0.4)" }, 8.74);
+      tl.fromTo("#halo", { opacity: 0.2, scale: 0.9 }, { opacity: 0.85, scale: 1.25, duration: 0.8, yoyo: true, repeat: 3, ease: "sine.inOut" }, 8.7);
+      cap("#cap2", 8.9, 12.2);
+
+      // Cursor travels to the light, panel opens
+      tl.set("#cursor", { x: 900, y: 640 }, 0);
+      tl.to("#cursor", { opacity: 1, duration: 0.3 }, 11.2);
+      tl.to("#cursor", { x: 1886, y: 378, duration: 1.1, ease: "power2.inOut" }, 11.3);
+      tl.to("#halo", { opacity: 0, duration: 0.4 }, 12.4);
+      tl.fromTo("#panel", { opacity: 0, scale: 0.15, transformOrigin: "100% 32%" },
+        { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.1)" }, 12.5);
+      tl.fromTo(["#waitView .hdr", "#waitCard", "#waitView .agentRow", "#waitView .swatches"],
+        { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, stagger: 0.07, ease }, 12.75);
+      cap("#cap3", 12.8, 17.0);
+
+      // Click option 1
+      tl.to("#cursor", { x: 1300, y: 560, duration: 1.0, ease: "power2.inOut" }, 14.4);
+      tl.to("#opt1Hover", { opacity: 1, duration: 0.15 }, 15.3);
+      tl.to("#cursor", { scale: 0.85, duration: 0.08, yoyo: true, repeat: 1 }, 15.8);
+      tl.to("#sent", { opacity: 1, duration: 0.25 }, 16.0);
+      tl.to("#check", { strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, 16.1);
+      tl.to("#orbRed", { opacity: 0, duration: 0.4 }, 16.3);
+      tl.to("#orbBlue", { opacity: 1, duration: 0.4 }, 16.3);
+
+      // Panel closes back into the light
+      tl.to("#cursor", { x: 1040, y: 700, duration: 0.9, ease: "power2.inOut" }, 17.0);
+      tl.to("#panel", { opacity: 0, scale: 0.15, duration: 0.45, ease: "power2.in" }, 17.3);
+      cap("#cap4", 17.4, 20.6);
+      tl.to("#cursor", { opacity: 0, duration: 0.3 }, 18.2);
+
+      // Job finishes: green
+      tl.to("#orbGreen", { opacity: 1, duration: 0.4 }, 20.8);
+      tl.to("#orbBlue", { opacity: 0, duration: 0.4 }, 20.8);
+      tl.set("#halo", { backgroundColor: "#38db8c" }, 20.8);
+      tl.to("#light", { x: -12, duration: 0.14, ease: "power2.out" }, 20.8);
+      tl.to("#light", { x: 0, duration: 0.5, ease: "elastic.out(1.2, 0.4)" }, 20.94);
+      tl.fromTo("#halo", { opacity: 0.2, scale: 0.9 }, { opacity: 0.75, scale: 1.2, duration: 1.0, yoyo: true, repeat: 1, ease: "sine.inOut", immediateRender: false }, 20.9);
+      cap("#cap5", 21.1, 27.6);
+
+      // Hover shows the summary
+      tl.set("#waitView", { opacity: 0 }, 22.0);
+      tl.set("#doneView", { opacity: 1 }, 22.0);
+      tl.set("#panel", { height: 440 }, 22.0);
+      tl.to("#cursor", { opacity: 1, duration: 0.3 }, 22.2);
+      tl.to("#cursor", { x: 1886, y: 378, duration: 1.0, ease: "power2.inOut" }, 22.3);
+      tl.to("#halo", { opacity: 0, duration: 0.4 }, 23.3);
+      tl.fromTo("#panel", { opacity: 0, scale: 0.15 }, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.1)", immediateRender: false }, 23.4);
+      tl.fromTo(["#doneView .hdr", "#doneView .card"], { y: 18, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.08, ease }, 23.6);
+      tl.to("#cursor", { x: 1420, y: 640, duration: 1.0, ease: "power2.inOut" }, 24.4);
+      tl.to("#panel", { opacity: 0, scale: 0.15, duration: 0.45, ease: "power2.in" }, 27.6);
+      tl.to("#cursor", { opacity: 0, duration: 0.3 }, 27.6);
+      cap("#cap6", 28.4, 31.2);
+
+      // Palettes: the light cycles through the themes
+      const themes = ["#ff8c99", "#ff1a99", "#ff5c33", "#ff7a66", "#ffffff", "#ff4a59"];
+      tl.to("#orbGreen", { opacity: 0, duration: 0.3 }, 28.2);
+      tl.to("#orbRed", { opacity: 1, duration: 0.3 }, 28.2);
+      tl.to("#halo", { opacity: 0.7, backgroundColor: "#ff4a59", duration: 0.3 }, 28.2);
+      themes.forEach((c, i) => {
+        tl.to("#orbRed", { color: c, duration: 0.25 }, 28.6 + i * 0.45);
+        tl.to("#halo", { backgroundColor: c, duration: 0.25 }, 28.6 + i * 0.45);
+      });
+
+      // Outro 31.6–38
+      tl.to("#outro", { opacity: 1, duration: 0.8, ease: "power2.inOut" }, 31.6);
+      tl.fromTo("#outro .tri i", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, stagger: 0.12, ease: "back.out(2)" }, 32.2);
+      tl.fromTo(["#outro .big", "#outro .sub", "#outro .url", "#outro .meta"], { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, stagger: 0.15, ease }, 32.4);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
