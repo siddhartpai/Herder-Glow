@@ -1,12 +1,12 @@
-# Herder-Glow
+# Herdr-Glow
 
 Your coding agents, one glance away.
 
-Herder-Glow puts a small light on the right edge of your Mac screen. The light shows the state of your herdr agents. Hover over it to answer a waiting agent without a terminal switch.
+Herdr-Glow puts a small light on the right edge of your Mac screen. The light shows the state of your herdr agents. Hover over it to answer a waiting agent without a terminal switch.
 
-**[Website and demo video →](https://siddhartpai.github.io/Herder-Glow/)**
+**[Website and demo video →](https://siddhartpai.github.io/Herdr-Glow/)**
 
-[![Herder-Glow demo](docs/assets/poster.jpg)](https://siddhartpai.github.io/Herder-Glow/)
+[![Herdr-Glow demo](docs/assets/poster.jpg)](https://siddhartpai.github.io/Herdr-Glow/)
 
 ## The light
 
@@ -28,11 +28,11 @@ Herder-Glow puts a small light on the right edge of your Mac screen. The light s
 
 ## Install
 
-1. Download `Herder-Glow-0.1.0-macos.zip` from the [latest release](https://github.com/siddhartpai/Herder-Glow/releases/latest).
-2. Unzip it and move `Herder-Glow.app` to `/Applications`.
+1. Download `Herdr-Glow-0.1.1-macos.zip` from the [latest release](https://github.com/siddhartpai/Herdr-Glow/releases/latest).
+2. Unzip it and move `Herdr-Glow.app` to `/Applications`.
 3. Run this command in Terminal. The app is not notarized by Apple, so macOS blocks it until you remove the quarantine flag.
    ```sh
-   xattr -cr /Applications/Herder-Glow.app
+   xattr -cr /Applications/Herdr-Glow.app
    ```
 4. Open the app. The light appears on the right edge of your main screen.
 
@@ -40,16 +40,16 @@ Herder-Glow puts a small light on the right edge of your Mac screen. The light s
 
 1. Clone the repository.
    ```sh
-   git clone https://github.com/siddhartpai/Herder-Glow.git
-   cd Herder-Glow
+   git clone https://github.com/siddhartpai/Herdr-Glow.git
+   cd Herdr-Glow
    ```
-2. Build the app. The script puts `Herder-Glow.app` in `~/Applications`.
+2. Build the app. The script puts `Herdr-Glow.app` in `~/Applications`.
    ```sh
    scripts/bundle.sh
    ```
 3. Open the app.
    ```sh
-   open ~/Applications/Herder-Glow.app
+   open ~/Applications/Herdr-Glow.app
    ```
 
 ## Requirements

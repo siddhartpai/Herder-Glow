@@ -1,5 +1,5 @@
 import Testing
-@testable import HerderGlowCore
+@testable import HerdrGlowCore
 
 @Test func choiceSendsOptionKeyWhenBlocked() async throws {
     let api = FakeAPI()
