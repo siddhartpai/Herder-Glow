@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='720' height='300' viewBox='0 0 720 300'>
+<rect width='100%' height='100%' rx='14' fill='#0d0e14'/>
+<text x='56' y='30' fill='#f4f4f6' font-size='16' font-weight='700' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>Herdr-Glow downloads</text>
+<text x='696' y='30' fill='#38db8c' font-size='16' font-weight='700' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>0 total</text>
+<line x1='56' y1='260' x2='696' y2='260' stroke='#ffffff22'/>
+<text x='48' y='52' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>1</text>
+<text x='48' y='264' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>0</text>
+<text x='56' y='286' fill='#ffffff88' font-size='11' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>2026-10-13</text>
+<text x='696' y='286' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>2026-10-13</text>
+<polygon points='376.0,260 376.0,260.0 376.0,260' fill='#428fff22'/>
+<polyline points='376.0,260.0' fill='none' stroke='#428fff' stroke-width='2.5' stroke-linejoin='round'/>
+<circle cx='376.0' cy='260.0' r='4' fill='#428fff'/>
+</svg>
