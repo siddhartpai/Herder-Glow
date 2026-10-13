@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import HerderGlowCore
+@testable import HerdrGlowCore
 
 @Test func listAgentsParsesAgentList() async throws {
     let server = try FakeHerdrServer { _ in [

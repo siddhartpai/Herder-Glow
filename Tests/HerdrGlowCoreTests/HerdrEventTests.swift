@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import HerderGlowCore
+@testable import HerdrGlowCore
 
 @Test func parsesStatusChangedEvent() {
     let event = HerdrEvent.parse([

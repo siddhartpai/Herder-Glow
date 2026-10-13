@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "HerderGlow",
+    name: "HerdrGlow",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "HerderGlowCore"),
-        .executableTarget(name: "HerderGlow", dependencies: ["HerderGlowCore"]),
-        .testTarget(name: "HerderGlowCoreTests", dependencies: ["HerderGlowCore"]),
+        .target(name: "HerdrGlowCore"),
+        .executableTarget(name: "HerdrGlow", dependencies: ["HerdrGlowCore"]),
+        .testTarget(name: "HerdrGlowCoreTests", dependencies: ["HerdrGlowCore"]),
     ],
     swiftLanguageModes: [.v5]
 )

@@ -1,5 +1,5 @@
 import Foundation
-@testable import HerderGlowCore
+@testable import HerdrGlowCore
 
 struct Call: Equatable {
     let pane: String
