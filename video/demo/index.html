@@ -63,11 +63,7 @@
 
       /* Edge light: notch on the right edge */
       #light { position: absolute; right: 0; top: 330px; width: 44px; height: 108px; }
-      #notch {
-        position: absolute; right: 0; top: 0; width: 44px; height: 108px;
-        background: rgba(0,0,0,0.88); border: 1px solid rgba(255,255,255,0.14); border-right: none;
-        border-radius: 12px 0 0 12px;
-      }
+      #notch { position: absolute; right: 0; top: 0; width: 44px; height: 108px; overflow: visible; }
       #halo {
         position: absolute; right: -10px; top: 14px; width: 80px; height: 80px; border-radius: 50%;
         background: var(--waiting); filter: blur(20px); opacity: 0;
@@ -75,7 +71,7 @@
       .orb {
         position: absolute; width: 20px; height: 20px; border-radius: 50%;
       }
-      #orb { right: 12px; top: 44px; }
+      #orb { right: 10px; top: 44px; }
       .orb .fill {
         position: absolute; inset: 0; border-radius: 50%;
         background: radial-gradient(circle at 38% 32%, rgba(255,255,255,0.95) 0%, currentColor 55%, currentColor 100%);
@@ -222,7 +218,10 @@
 
       <div id="light">
         <div id="halo" data-layout-allow-overflow></div>
-        <div id="notch"></div>
+        <svg id="notch" viewBox="0 0 44 108">
+          <path d="M44 0 L44 7.59 A12 12 0 0 1 36.1 18.87 L6.58 29.61 A10 10 0 0 0 0 39 L0 69 A10 10 0 0 0 6.58 78.39 L36.1 89.13 A12 12 0 0 1 44 100.41 L44 108 Z" fill="rgba(0,0,0,0.85)"/>
+          <path d="M44 0 L44 7.59 A12 12 0 0 1 36.1 18.87 L6.58 29.61 A10 10 0 0 0 0 39 L0 69 A10 10 0 0 0 6.58 78.39 L36.1 89.13 A12 12 0 0 1 44 100.41 L44 108" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+        </svg>
         <div id="orb" class="orb">
           <div id="orbBlue" class="orb"><div class="fill"></div></div>
           <div id="orbRed" class="orb"><div class="fill"></div></div>
