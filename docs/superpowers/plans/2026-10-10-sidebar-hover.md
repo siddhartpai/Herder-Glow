@@ -1986,7 +1986,7 @@ Run: `chmod +x scripts/bundle.sh`
 
 Run: `scripts/bundle.sh && open ~/Applications/SidebarHover.app`
 Expected:
-1. The script prints `Built /Users/sid/Applications/SidebarHover.app`.
+1. The script prints `Built ~/Applications/SidebarHover.app`.
 2. The light shows on the right edge. No Dock icon shows.
 3. A beacon icon shows in the menu bar. Its menu has "Start at login" and "Quit".
 4. Click "Start at login": the item gets a check mark on the next open. Then System Settings › General › Login Items lists SidebarHover.

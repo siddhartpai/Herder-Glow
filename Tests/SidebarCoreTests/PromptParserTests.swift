@@ -63,3 +63,67 @@ import Testing
 @Test func nonSequentialNumbersAreNotAPrompt() {
     #expect(PromptParser.options(in: "1. a\n3. c").isEmpty)
 }
+
+@Test func questionIsTheBlockAboveTheOptions() {
+    let screen = """
+    ⏺ Done: I created hello.txt.
+    ❯ Use the AskUserQuestion tool to ask me which color I like.
+    ────────────────
+     ☐ Color
+    Which color do you like?
+    ❯ 1. Red
+         The color red.
+      2. Green
+         The color green.
+    ────────────────
+      3. Chat about this
+
+    Enter to select · ↑/↓ to navigate · Esc to cancel
+    """
+    #expect(PromptParser.question(in: screen) == "☐ Color\nWhich color do you like?")
+}
+
+@Test func questionDropsBoxBorders() {
+    let screen = """
+    ╭───────────────────────────────────────────╮
+    │ Bash command                              │
+    │                                           │
+    │   rm -rf build                            │
+    │                                           │
+    │ Do you want to proceed?                   │
+    │ ❯ 1. Yes                                  │
+    │   2. No                                   │
+    ╰───────────────────────────────────────────╯
+    """
+    #expect(PromptParser.question(in: screen) == "Bash command\nrm -rf build\nDo you want to proceed?")
+}
+
+@Test func questionKeepsOnlyTheLastLines() {
+    let diff = (1...20).map { "  \($0) line" }.joined(separator: "\n")
+    let screen = "Edit file\n\(diff)\nDo you want to make this edit?\n❯ 1. Yes\n  2. No"
+    let question = PromptParser.question(in: screen)
+    #expect(question?.split(separator: "\n").count == PromptParser.questionLineLimit)
+    #expect(question?.hasSuffix("Do you want to make this edit?") == true)
+}
+
+@Test func questionNeedsOptions() {
+    #expect(PromptParser.question(in: "Running tests…\nAll 12 tests passed.") == nil)
+}
+
+@Test func questionDropsDashedLinesAndTips() {
+    let screen = """
+    ⏺ Write(notes.txt)
+    ────────────────
+     Create file
+     notes.txt
+     Tip: auto mode handles prompts for you
+    ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+      1 test
+    ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+     Do you want to create notes.txt?
+     ❯ 1. Yes
+       2. No
+     Esc to cancel · Tab to amend
+    """
+    #expect(PromptParser.question(in: screen) == "Create file\nnotes.txt\n1 test\nDo you want to create notes.txt?")
+}

@@ -42,12 +42,12 @@ final class EdgeLightWindow: NSPanel {
     /// The light's area on screen.
     var pillFrame: NSRect { Self.pillRect.offsetBy(dx: frame.minX, dy: frame.minY) }
 
-    /// Vertical center of the right edge of the primary screen.
+    /// Right edge of the primary screen, a little above the vertical center.
     func reposition() {
         guard let screen = NSScreen.screens.first else { return }
         let frame = screen.frame
         setFrameOrigin(NSPoint(x: frame.maxX - Self.size.width,
-                               y: frame.midY - Self.size.height / 2))
+                               y: frame.midY + frame.height * 0.15 - Self.size.height / 2))
     }
 }
 

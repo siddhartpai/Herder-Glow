@@ -22,7 +22,7 @@ import Foundation
     }
 }
 
-@Test func readRequestsRecentTwentyLines() async throws {
+@Test func readRequestsVisibleScreen() async throws {
     let server = try FakeHerdrServer { _ in [
         #"{"id":"1","result":{"type":"pane_read","read":{"pane_id":"w1:p1","text":"Do you want to proceed?"}}}"#,
     ] }
@@ -32,7 +32,7 @@ import Foundation
     let params = server.requests.first?["params"] as? [String: Any]
     #expect(server.requests.first?["method"] as? String == "agent.read")
     #expect(params?["target"] as? String == "w1:p1")
-    #expect(params?["source"] as? String == "recent")
+    #expect(params?["source"] as? String == "visible")
     #expect(params?["lines"] as? Int == 20)
 }
 

@@ -256,16 +256,27 @@ struct BlockedAgentCard: View {
             Label(agent.cwd, systemImage: "folder")
                 .font(.system(size: 10.5)).foregroundStyle(.tertiary)
                 .lineLimit(1).truncationMode(.head)
-            ScrollView([.horizontal, .vertical]) {
-                Text(model.screens[agent.paneID].map(compact) ?? "Loading…")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.82))
-                    .fixedSize()
-                    .padding(8)
+            Group {
+                if let question = model.screens[agent.paneID].flatMap(PromptParser.question(in:)) {
+                    Text(question)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.88))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(10)
+                } else {
+                    ScrollView([.horizontal, .vertical]) {
+                        Text(model.screens[agent.paneID].map(compact) ?? "Loading…")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .fixedSize()
+                            .padding(8)
+                    }
+                    .defaultScrollAnchor(.bottomLeading)
+                    .scrollIndicators(.never)
+                    .frame(maxHeight: 150)
+                }
             }
-            .defaultScrollAnchor(.bottomLeading)
-            .scrollIndicators(.never)
-            .frame(maxHeight: 150)
             .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.06), lineWidth: 0.5))
@@ -310,6 +321,8 @@ struct BlockedAgentCard: View {
             if inside { model.hoveredCard = agent.paneID }
             else if model.hoveredCard == agent.paneID { model.hoveredCard = nil }
         }
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onTapGesture { openInHerdr(agent.paneID, model: model) }
         .task(id: agent) { await model.reload(agent.paneID) }
     }
 
@@ -425,6 +438,8 @@ struct FinishedCard: View {
         .background(Palette.finished.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
             .strokeBorder(Palette.finished.opacity(0.22), lineWidth: 0.75))
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onTapGesture { openInHerdr(agent.paneID, model: model) }
     }
 }
 
@@ -461,6 +476,8 @@ struct AgentRow: View {
                 SummaryView(agent: agent, model: model)
                     .padding(.horizontal, 8)
                     .padding(.bottom, 8)
+                    .contentShape(Rectangle())
+                    .onTapGesture { openInHerdr(agent.paneID, model: model) }
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -567,7 +584,7 @@ struct SummaryView: View {
                     .font(.system(size: 11)).foregroundStyle(.orange)
             }
             Button {
-                Task { await model.focus(agent.paneID) }
+                openInHerdr(agent.paneID, model: model)
             } label: {
                 Label("Open in herdr", systemImage: "arrow.up.forward.app")
                     .font(.system(size: 11, weight: .medium))
@@ -626,5 +643,17 @@ extension AgentStatus {
         case .done: Palette.finished
         case .idle, .unknown: .gray
         }
+    }
+}
+
+/// Focuses the agent's pane, then brings the Herdr window to the front. macOS switches to the
+/// Space or screen that holds the window, and shows it again if it is minimized.
+@MainActor func openInHerdr(_ paneID: String, model: PanelModel) {
+    Task {
+        await model.focus(paneID)
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "so.pen.herdr-gpui") else { return }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        try? await NSWorkspace.shared.openApplication(at: url, configuration: configuration)
     }
 }

@@ -45,8 +45,9 @@ public final class HerdrClient: HerdrAPI {
         return agent
     }
 
+    /// Reads the visible screen. herdr refuses longer "recent" reads while an agent is blocked.
     public func read(_ paneID: String, lines: Int) async throws -> String {
-        let result = try await call("agent.read", ["target": paneID, "source": "recent", "lines": lines])
+        let result = try await call("agent.read", ["target": paneID, "source": "visible", "lines": lines])
         guard let read = result["read"] as? [String: Any], let text = read["text"] as? String else {
             throw HerdrError.badResponse
         }

@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         hover.anchor = { [weak self] in self?.light.pillFrame ?? .zero }
         hover.lightWindow = light
         light.orderFrontRegardless()
+        StickySpace.add(light)
         setUpStatusItem()
     }
 
