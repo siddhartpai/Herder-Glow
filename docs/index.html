@@ -108,7 +108,7 @@
       <h1>Herder-Glow</h1>
       <p class="tag">Your coding agents, one glance away.</p>
       <div class="cta">
-        <a class="btn primary" href="#install">Install</a>
+        <a class="btn primary" href="https://github.com/siddhartpai/Herder-Glow/releases/latest">Download</a>
         <a class="btn ghost" href="https://github.com/siddhartpai/Herder-Glow">View source</a>
       </div>
     </div>
@@ -143,14 +143,15 @@
 
     <section id="install">
       <h2>Install</h2>
-      <p class="lead">Herder-Glow is a native Swift app. You build it from source in about one minute.</p>
+      <p class="lead">Download the app for macOS 14 or later. It runs on Apple silicon and Intel Macs.</p>
       <ol class="steps">
-        <li><div>Clone the repository.<pre>git clone https://github.com/siddhartpai/Herder-Glow.git
-cd Herder-Glow</pre></div></li>
-        <li><div>Build the app. The script puts <code>Herder-Glow.app</code> in <code>~/Applications</code>.<pre>scripts/bundle.sh</pre></div></li>
-        <li><div>Open the app. The light appears on the right edge of your main screen.<pre>open ~/Applications/Herder-Glow.app</pre></div></li>
+        <li><div>Download <code>Herder-Glow-0.1.0-macos.zip</code> from the <a href="https://github.com/siddhartpai/Herder-Glow/releases/latest">latest release</a>.</div></li>
+        <li><div>Unzip it and move <code>Herder-Glow.app</code> to <code>/Applications</code>.</div></li>
+        <li><div>Run this command in Terminal. The app is not notarized by Apple, so macOS blocks it until you remove the quarantine flag.<pre>xattr -cr /Applications/Herder-Glow.app</pre></div></li>
+        <li><div>Open the app. The light appears on the right edge of your main screen.</div></li>
       </ol>
-      <p class="req">Requirements: macOS 14 or later, a Swift 6 toolchain (Xcode or the Command Line Tools), and herdr running. The app connects to the herdr socket at <code>$HERDR_SOCKET_PATH</code>, or <code>~/.config/herdr/herdr.sock</code>.</p>
+      <p class="req">To build from source, clone the repository and run <code>scripts/bundle.sh</code>. You need a Swift 6 toolchain (Xcode or the Command Line Tools).</p>
+      <p class="req">Requirements: macOS 14 or later and herdr running. The app connects to the herdr socket at <code>$HERDR_SOCKET_PATH</code>, or <code>~/.config/herdr/herdr.sock</code>.</p>
     </section>
 
     <footer>
