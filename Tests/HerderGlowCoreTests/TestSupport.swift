@@ -1,5 +1,5 @@
 import Foundation
-@testable import SidebarCore
+@testable import HerderGlowCore
 
 func agent(_ paneID: String, _ status: AgentStatus) -> Agent {
     Agent(paneID: paneID, title: paneID, cwd: "/tmp", status: status)

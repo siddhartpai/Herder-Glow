@@ -1,6 +1,6 @@
 import AppKit
 import ServiceManagement
-import SidebarCore
+import HerderGlowCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -28,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "light.beacon.max",
-                                           accessibilityDescription: "SidebarHover")
+                                           accessibilityDescription: "Herder-Glow")
         let menu = NSMenu()
         menu.delegate = self
         loginItem.target = self

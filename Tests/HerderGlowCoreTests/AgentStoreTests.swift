@@ -1,5 +1,5 @@
 import Testing
-@testable import SidebarCore
+@testable import HerderGlowCore
 
 @MainActor @Test func refreshLoadsAgentsAndSubscribesToTheirPanes() async {
     let api = FakeAPI()

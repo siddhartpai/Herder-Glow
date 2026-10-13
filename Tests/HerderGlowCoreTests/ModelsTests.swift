@@ -1,5 +1,5 @@
 import Testing
-@testable import SidebarCore
+@testable import HerderGlowCore
 
 private func agents(_ statuses: AgentStatus...) -> [Agent] {
     statuses.enumerated().map { Agent(paneID: "p\($0.offset)", title: "", cwd: "", status: $0.element) }

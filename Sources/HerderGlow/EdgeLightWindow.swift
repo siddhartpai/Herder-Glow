@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SidebarCore
+import HerderGlowCore
 
 /// Window on the right screen edge that shows the traffic light. It is wider and taller than
 /// the light, so the attention glow has room; only the light itself reports hover.

@@ -1,12 +1,12 @@
-# SidebarHover
+# Herder-Glow
 
 Your coding agents, one glance away.
 
-SidebarHover puts a small light on the right edge of your Mac screen. The light shows the state of your herdr agents. Hover over it to answer a waiting agent without a terminal switch.
+Herder-Glow puts a small light on the right edge of your Mac screen. The light shows the state of your herdr agents. Hover over it to answer a waiting agent without a terminal switch.
 
-**[Website and demo video →](https://siddhartpai.github.io/sidebar-hover/)**
+**[Website and demo video →](https://siddhartpai.github.io/Herder-Glow/)**
 
-[![SidebarHover demo](docs/assets/poster.jpg)](https://siddhartpai.github.io/sidebar-hover/)
+[![Herder-Glow demo](docs/assets/poster.jpg)](https://siddhartpai.github.io/Herder-Glow/)
 
 ## The light
 
@@ -30,16 +30,16 @@ SidebarHover puts a small light on the right edge of your Mac screen. The light 
 
 1. Clone the repository.
    ```sh
-   git clone https://github.com/siddhartpai/sidebar-hover.git
-   cd sidebar-hover
+   git clone https://github.com/siddhartpai/Herder-Glow.git
+   cd Herder-Glow
    ```
-2. Build the app. The script puts `SidebarHover.app` in `~/Applications`.
+2. Build the app. The script puts `Herder-Glow.app` in `~/Applications`.
    ```sh
    scripts/bundle.sh
    ```
 3. Open the app.
    ```sh
-   open ~/Applications/SidebarHover.app
+   open ~/Applications/Herder-Glow.app
    ```
 
 ## Requirements

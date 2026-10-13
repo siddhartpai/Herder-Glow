@@ -1,5 +1,5 @@
 import Foundation
-@testable import SidebarCore
+@testable import HerderGlowCore
 
 struct Call: Equatable {
     let pane: String

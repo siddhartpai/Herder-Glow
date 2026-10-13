@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import SidebarCore
+@testable import HerderGlowCore
 
 private func line(_ object: [String: Any]) -> String {
     String(data: try! JSONSerialization.data(withJSONObject: object), encoding: .utf8)!
