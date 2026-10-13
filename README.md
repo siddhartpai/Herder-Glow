@@ -1,5 +1,11 @@
 # Herdr-Glow
 
+[![Downloads](https://img.shields.io/github/downloads/siddhartpai/Herdr-Glow/total?label=downloads&color=38db8c)](https://github.com/siddhartpai/Herdr-Glow/releases)
+[![Latest release](https://img.shields.io/github/v/release/siddhartpai/Herdr-Glow?color=428fff)](https://github.com/siddhartpai/Herdr-Glow/releases/latest)
+[![Latest release downloads](https://img.shields.io/github/downloads/siddhartpai/Herdr-Glow/latest/total?label=latest%20downloads)](https://github.com/siddhartpai/Herdr-Glow/releases/latest)
+[![Stars](https://img.shields.io/github/stars/siddhartpai/Herdr-Glow?style=flat&color=ff4a59)](https://github.com/siddhartpai/Herdr-Glow/stargazers)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
+
 Your coding agents, one glance away.
 
 Herdr-Glow puts a small light on the right edge of your Mac screen. The light shows the state of your herdr agents. Hover over it to answer a waiting agent without a terminal switch.
@@ -65,6 +71,14 @@ swift test
 ```
 
 The demo video source is in `video/demo`. It is a [HyperFrames](https://hyperframes.heygen.com) composition with mock agent data. The website is in `docs/`.
+
+## Usage
+
+Total release downloads, recorded once a day by the `Download stats` workflow:
+
+![Downloads over time](https://raw.githubusercontent.com/siddhartpai/Herdr-Glow/stats/downloads.svg)
+
+[![Star history](https://api.star-history.com/svg?repos=siddhartpai%2Fherdr-glow&type=Date&theme=dark)](https://star-history.com/#siddhartpai/Herdr-Glow&Date)
 
 ## License
 
