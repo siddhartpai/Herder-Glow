@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SidebarCore
+import HerderGlowCore
 
 final class HoverPanel: NSPanel {
     init() {

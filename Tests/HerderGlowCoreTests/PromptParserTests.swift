@@ -1,5 +1,5 @@
 import Testing
-@testable import SidebarCore
+@testable import HerderGlowCore
 
 @Test func boxedPermissionPrompt() {
     let screen = """

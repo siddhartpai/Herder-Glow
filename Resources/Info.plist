@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>dev.sid.sidebarhover</string>
+    <string>dev.sid.herderglow</string>
     <key>CFBundleName</key>
-    <string>SidebarHover</string>
+    <string>Herder-Glow</string>
     <key>CFBundleExecutable</key>
-    <string>SidebarHover</string>
+    <string>HerderGlow</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

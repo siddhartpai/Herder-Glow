@@ -1,5 +1,5 @@
 import SwiftUI
-import SidebarCore
+import HerderGlowCore
 
 private enum Motion {
     static let morph = Animation.spring(response: 0.38, dampingFraction: 0.82)
