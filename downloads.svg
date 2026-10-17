@@ -6,8 +6,8 @@
 <text x='48' y='52' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>1</text>
 <text x='48' y='264' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>0</text>
 <text x='56' y='286' fill='#ffffff88' font-size='11' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>2026-10-13</text>
-<text x='696' y='286' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>2026-10-16</text>
-<polygon points='56.0,260 56.0,260.0 269.3,48.0 482.7,48.0 696.0,48.0 696.0,260' fill='#428fff22'/>
-<polyline points='56.0,260.0 269.3,48.0 482.7,48.0 696.0,48.0' fill='none' stroke='#428fff' stroke-width='2.5' stroke-linejoin='round'/>
+<text x='696' y='286' fill='#ffffff88' font-size='11' text-anchor='end' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif'>2026-10-17</text>
+<polygon points='56.0,260 56.0,260.0 216.0,48.0 376.0,48.0 536.0,48.0 696.0,48.0 696.0,260' fill='#428fff22'/>
+<polyline points='56.0,260.0 216.0,48.0 376.0,48.0 536.0,48.0 696.0,48.0' fill='none' stroke='#428fff' stroke-width='2.5' stroke-linejoin='round'/>
 <circle cx='696.0' cy='48.0' r='4' fill='#428fff'/>
 </svg>
